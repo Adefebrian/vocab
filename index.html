@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vocab Learning - Belajar Kosakata Bahasa Inggris</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="background">
+        <div class="blob blob-1"></div>
+        <div class="blob blob-2"></div>
+        <div class="blob blob-3"></div>
+    </div>
+    <div class="container">
+        <header class="glass-card">
+            <h1>📚 Vocab Learning</h1>
+            <p>Belajar Kosakata Bahasa Inggris dengan Mudah</p>
+        </header>
+
+        <div class="search-section glass-card">
+            <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
+                <input type="text" id="searchInput" placeholder="Cari kata kerja..." class="search-input" style="flex: 1;">
+                <button id="searchApiBtn" class="btn-api">🔍 Cari dari API</button>
+            </div>
+            <div id="loadingIndicator" class="loading-indicator" style="display: none;">
+                <div class="spinner"></div>
+                <span>Memuat data dari API...</span>
+            </div>
+            <div class="filter-section">
+                <div class="filter-group">
+                    <label class="filter-label">Kategori:</label>
+                    <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                        <button class="filter-btn active" data-category="all">Semua</button>
+                        <div class="dropdown-container">
+                            <button class="filter-btn dropdown-toggle" id="categoryDropdownBtn">📚 Pilih Kategori ▼</button>
+                            <div class="dropdown-menu" id="categoryDropdown">
+                                <div class="dropdown-section">
+                                    <div class="dropdown-header">Umum</div>
+                                    <button class="dropdown-item" data-category="sehari-hari">Sehari-hari</button>
+                                    <button class="dropdown-item" data-category="perasaan">Perasaan</button>
+                                    <button class="dropdown-item" data-category="keluarga">Keluarga</button>
+                                    <button class="dropdown-item" data-category="teman">Pertemanan</button>
+                                </div>
+                                <div class="dropdown-section">
+                                    <div class="dropdown-header">Profesi & Bisnis</div>
+                                    <button class="dropdown-item" data-category="bisnis">Bisnis</button>
+                                    <button class="dropdown-item" data-category="marketing">Marketing</button>
+                                    <button class="dropdown-item" data-category="keuangan">Keuangan</button>
+                                    <button class="dropdown-item" data-category="hr">HR & Rekrutmen</button>
+                                    <button class="dropdown-item" data-category="sales">Sales</button>
+                                </div>
+                                <div class="dropdown-section">
+                                    <div class="dropdown-header">Pendidikan</div>
+                                    <button class="dropdown-item" data-category="akademik">Akademik</button>
+                                    <button class="dropdown-item" data-category="sains">Sains</button>
+                                    <button class="dropdown-item" data-category="matematika">Matematika</button>
+                                    <button class="dropdown-item" data-category="sejarah">Sejarah</button>
+                                    <button class="dropdown-item" data-category="literatur">Literatur</button>
+                                </div>
+                                <div class="dropdown-section">
+                                    <div class="dropdown-header">Teknologi</div>
+                                    <button class="dropdown-item" data-category="teknologi">Teknologi</button>
+                                    <button class="dropdown-item" data-category="programming">Programming</button>
+                                    <button class="dropdown-item" data-category="ai">AI & Machine Learning</button>
+                                    <button class="dropdown-item" data-category="cybersecurity">Cybersecurity</button>
+                                </div>
+                                <div class="dropdown-section">
+                                    <div class="dropdown-header">Lifestyle</div>
+                                    <button class="dropdown-item" data-category="makanan">Makanan</button>
+                                    <button class="dropdown-item" data-category="fashion">Fashion</button>
+                                    <button class="dropdown-item" data-category="kecantikan">Kecantikan</button>
+                                    <button class="dropdown-item" data-category="hobi">Hobi</button>
+                                    <button class="dropdown-item" data-category="musik">Musik</button>
+                                    <button class="dropdown-item" data-category="film">Film & TV</button>
+                                </div>
+                                <div class="dropdown-section">
+                                    <div class="dropdown-header">Kesehatan & Olahraga</div>
+                                    <button class="dropdown-item" data-category="kesehatan">Kesehatan</button>
+                                    <button class="dropdown-item" data-category="olahraga">Olahraga</button>
+                                    <button class="dropdown-item" data-category="fitness">Fitness</button>
+                                    <button class="dropdown-item" data-category="medis">Medis</button>
+                                </div>
+                                <div class="dropdown-section">
+                                    <div class="dropdown-header">Perjalanan & Wisata</div>
+                                    <button class="dropdown-item" data-category="perjalanan">Perjalanan</button>
+                                    <button class="dropdown-item" data-category="hotel">Hotel & Akomodasi</button>
+                                    <button class="dropdown-item" data-category="transportasi">Transportasi</button>
+                                </div>
+                                <div class="dropdown-section">
+                                    <div class="dropdown-header">Lainnya</div>
+                                    <button class="dropdown-item" data-category="slang">Slang</button>
+                                    <button class="dropdown-item" data-category="formal">Formal</button>
+                                    <button class="dropdown-item" data-category="hukum">Hukum</button>
+                                    <button class="dropdown-item" data-category="politik">Politik</button>
+                                    <button class="dropdown-item" data-category="lingkungan">Lingkungan</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Level:</label>
+                    <div class="filter-buttons" id="levelFilters">
+                        <button class="filter-btn active" data-level="all">Semua</button>
+                        <button class="filter-btn" data-level="beginner">Beginner</button>
+                        <button class="filter-btn" data-level="intermediate">Intermediate</button>
+                        <button class="filter-btn" data-level="advanced">Advanced</button>
+                    </div>
+                </div>
+                <div class="filter-group">
+                    <label class="filter-label">Tipe:</label>
+                    <div class="filter-buttons" id="typeFilters">
+                        <button class="filter-btn active" data-type="all">Semua</button>
+                        <button class="filter-btn" data-type="common">Beraturan</button>
+                        <button class="filter-btn" data-type="irregular">Tidak Beraturan</button>
+                    </div>
+                </div>
+            </div>
+            <div class="bulk-actions" style="margin-top: 1rem; padding-top: 1rem; border-top: 1px solid var(--glass-border);">
+                <label class="filter-label">Generate Vocabulary:</label>
+                <div style="display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap;">
+                    <div class="dropdown-container" style="position: relative;">
+                        <select id="generateCategorySelect" class="select-input">
+                            <option value="all">Semua Kategori</option>
+                            <optgroup label="Umum">
+                                <option value="sehari-hari">Sehari-hari</option>
+                                <option value="perasaan">Perasaan</option>
+                                <option value="keluarga">Keluarga</option>
+                                <option value="teman">Pertemanan</option>
+                            </optgroup>
+                            <optgroup label="Profesi & Bisnis">
+                                <option value="bisnis">Bisnis</option>
+                                <option value="marketing">Marketing</option>
+                                <option value="keuangan">Keuangan</option>
+                                <option value="hr">HR & Rekrutmen</option>
+                                <option value="sales">Sales</option>
+                            </optgroup>
+                            <optgroup label="Pendidikan">
+                                <option value="akademik">Akademik</option>
+                                <option value="sains">Sains</option>
+                                <option value="matematika">Matematika</option>
+                                <option value="sejarah">Sejarah</option>
+                                <option value="literatur">Literatur</option>
+                            </optgroup>
+                            <optgroup label="Teknologi">
+                                <option value="teknologi">Teknologi</option>
+                                <option value="programming">Programming</option>
+                                <option value="ai">AI & Machine Learning</option>
+                                <option value="cybersecurity">Cybersecurity</option>
+                            </optgroup>
+                            <optgroup label="Lifestyle">
+                                <option value="makanan">Makanan</option>
+                                <option value="fashion">Fashion</option>
+                                <option value="kecantikan">Kecantikan</option>
+                                <option value="hobi">Hobi</option>
+                                <option value="musik">Musik</option>
+                                <option value="film">Film & TV</option>
+                            </optgroup>
+                            <optgroup label="Kesehatan & Olahraga">
+                                <option value="kesehatan">Kesehatan</option>
+                                <option value="olahraga">Olahraga</option>
+                                <option value="fitness">Fitness</option>
+                                <option value="medis">Medis</option>
+                            </optgroup>
+                            <optgroup label="Perjalanan & Wisata">
+                                <option value="perjalanan">Perjalanan</option>
+                                <option value="hotel">Hotel & Akomodasi</option>
+                                <option value="transportasi">Transportasi</option>
+                            </optgroup>
+                            <optgroup label="Lainnya">
+                                <option value="slang">Slang</option>
+                                <option value="formal">Formal</option>
+                                <option value="hukum">Hukum</option>
+                                <option value="politik">Politik</option>
+                                <option value="lingkungan">Lingkungan</option>
+                            </optgroup>
+                        </select>
+                    </div>
+                    <button id="generateCategoryBtn" class="btn-api" style="font-size: 0.85rem; padding: 0.6rem 1rem;">⚡ Generate 100 Vocab</button>
+                    <button id="generateBulkBtn" class="btn-api" style="font-size: 0.85rem; padding: 0.6rem 1rem;">⚡ Generate Semua</button>
+                </div>
+            </div>
+        </div>
+
+        <div class="main-content">
+            <div class="vocab-stats glass-card" id="vocabStats" style="margin-bottom: 1rem;">
+                <span id="statsText">Menampilkan 0 dari 0 vocabulary</span>
+            </div>
+            <div class="vocab-list" id="vocabList">
+                <!-- Vocabulary cards will be inserted here -->
+            </div>
+            <div class="pagination-container" id="paginationContainer">
+                <!-- Pagination controls will be inserted here -->
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay untuk popup -->
+    <div class="overlay" id="overlay" onclick="closeQuiz()" style="display: none;"></div>
+
+    <!-- Popup Quiz Section -->
+    <div class="quiz-section glass-card" id="quizSection" style="display: none;" onclick="event.stopPropagation()">
+        <h2>Latihan Soal</h2>
+        <div class="quiz-content" id="quizContent">
+            <!-- Quiz will be inserted here -->
+        </div>
+        <button class="btn-close" onclick="closeQuiz()">Tutup</button>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>
+
