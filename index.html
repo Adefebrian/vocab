@@ -33,14 +33,56 @@
                         📤 Import
                         <input type="file" accept=".json,.csv" onchange="handleImport(event)" style="display: none;">
                     </label>
+                    <button id="aiConfigBtn" class="btn-api" onclick="toggleAIConfig()" style="font-size: 0.9rem; padding: 0.8rem 1.5rem;">🤖 AI Config</button>
                 </div>
             </div>
         </header>
 
+        <!-- AI Configuration Modal -->
+        <div class="overlay" id="aiConfigOverlay" onclick="toggleAIConfig()" style="display: none;"></div>
+        <div class="quiz-section glass-card" id="aiConfigSection" style="display: none;" onclick="event.stopPropagation()">
+            <h2>🤖 AI Configuration</h2>
+            <div class="quiz-content">
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <input type="checkbox" id="useAICheckbox" onchange="toggleAIUsage()" style="margin-right: 0.5rem;">
+                        Enable AI Features (for better categorization, meaning, and examples)
+                    </label>
+                </div>
+                
+                <div style="margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-primary); font-weight: 500;">AI Provider:</label>
+                    <select id="aiProviderSelect" class="select-input" onchange="changeAIProvider()" style="width: 100%;">
+                        <option value="huggingface">Hugging Face (Free, No API Key)</option>
+                        <option value="gemini">Google Gemini (Free Tier, Requires API Key)</option>
+                    </select>
+                </div>
+                
+                <div id="geminiConfig" style="display: none; margin-bottom: 1.5rem;">
+                    <label style="display: block; margin-bottom: 0.5rem; color: var(--text-primary); font-weight: 500;">Gemini API Key:</label>
+                    <input type="password" id="geminiAPIKey" class="search-input" placeholder="Enter your Gemini API key" style="width: 100%;">
+                    <p style="font-size: 0.8rem; color: var(--text-muted); margin-top: 0.5rem;">
+                        Get your free API key at: <a href="https://makersuite.google.com/app/apikey" target="_blank" style="color: var(--primary-color);">Google AI Studio</a>
+                    </p>
+                </div>
+                
+                <div style="padding: 1rem; background: rgba(99, 102, 241, 0.1); border-radius: 10px; margin-bottom: 1rem;">
+                    <strong style="color: var(--text-primary);">AI Features:</strong>
+                    <ul style="margin-top: 0.5rem; padding-left: 1.5rem; color: var(--text-secondary); font-size: 0.9rem;">
+                        <li>Intelligent categorization based on context</li>
+                        <li>More accurate Indonesian translations</li>
+                        <li>Natural, varied example sentences</li>
+                        <li>Better verb validation and generation</li>
+                    </ul>
+                </div>
+            </div>
+            <button class="btn-close" onclick="toggleAIConfig()">Save & Close</button>
+        </div>
+
         <div class="search-section glass-card">
             <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
                 <input type="text" id="searchInput" placeholder="Cari kata kerja..." class="search-input" style="flex: 1;">
-                <button id="searchApiBtn" class="btn-api">🔍 Cari Vocab</button>
+                <button id="searchApiBtn" class="btn-api">🔍 Cari dari API</button>
             </div>
             <div id="loadingIndicator" class="loading-indicator" style="display: none;">
                 <div class="spinner"></div>
