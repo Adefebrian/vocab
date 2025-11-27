@@ -1329,6 +1329,41 @@ let currentQuiz = null;
 let currentPage = 1;
 const itemsPerPage = 12; // 12 items per page
 
+// Word Bank Management
+function getWordBank() {
+    const saved = localStorage.getItem('wordBank');
+    return saved ? JSON.parse(saved) : [];
+}
+
+function saveWordBank(wordBank) {
+    localStorage.setItem('wordBank', JSON.stringify(wordBank));
+}
+
+function addToWordBank(vocabId) {
+    const wordBank = getWordBank();
+    if (!wordBank.includes(vocabId)) {
+        wordBank.push(vocabId);
+        saveWordBank(wordBank);
+        return true;
+    }
+    return false;
+}
+
+function removeFromWordBank(vocabId) {
+    const wordBank = getWordBank();
+    const index = wordBank.indexOf(vocabId);
+    if (index > -1) {
+        wordBank.splice(index, 1);
+        saveWordBank(wordBank);
+        return true;
+    }
+    return false;
+}
+
+function isInWordBank(vocabId) {
+    return getWordBank().includes(vocabId);
+}
+
 // Category colors mapping
 const categoryColors = {
     'sehari-hari': '#6366f1', 'perasaan': '#f59e0b', 'keluarga': '#ec4899', 'teman': '#8b5cf6',
@@ -1350,7 +1385,7 @@ const levelMapping = {
 
 // Verb patterns untuk generate vocabulary
 const verbPatterns = {
-    'sehari-hari': ['do', 'say', 'get', 'make', 'go', 'know', 'think', 'take', 'see', 'come', 'want', 'use', 'find', 'give', 'tell', 'work', 'call', 'try', 'ask', 'need', 'feel', 'become', 'leave', 'put', 'mean', 'keep', 'let', 'begin', 'seem', 'help', 'show', 'hear', 'play', 'run', 'move', 'like', 'live', 'believe', 'bring', 'happen', 'write', 'sit', 'stand', 'lose', 'pay', 'meet', 'include', 'continue', 'set', 'learn', 'change', 'lead', 'understand', 'watch', 'follow', 'stop', 'create', 'speak', 'read', 'spend', 'grow', 'open', 'walk', 'win', 'offer', 'remember', 'love', 'consider', 'appear', 'buy', 'wait', 'serve', 'die', 'send', 'build', 'stay', 'fall', 'cut', 'reach', 'kill', 'raise', 'pass', 'sell', 'decide', 'return', 'explain', 'develop', 'carry', 'break', 'receive', 'agree', 'support', 'hit', 'produce', 'eat', 'cover', 'catch', 'draw', 'choose'],
+    'sehari-hari': ['do', 'say', 'get', 'make', 'go', 'know', 'think', 'take', 'see', 'come', 'want', 'use', 'find', 'give', 'tell', 'work', 'call', 'try', 'ask', 'need', 'feel', 'become', 'leave', 'put', 'mean', 'keep', 'let', 'begin', 'seem', 'help', 'show', 'hear', 'play', 'run', 'move', 'like', 'live', 'believe', 'bring', 'happen', 'write', 'sit', 'stand', 'lose', 'pay', 'meet', 'include', 'continue', 'set', 'learn', 'change', 'lead', 'understand', 'watch', 'follow', 'stop', 'create', 'speak', 'read', 'spend', 'grow', 'open', 'walk', 'win', 'offer', 'remember', 'love', 'consider', 'appear', 'buy', 'wait', 'serve', 'die', 'send', 'build', 'stay', 'fall', 'cut', 'reach', 'kill', 'raise', 'pass', 'sell', 'decide', 'return', 'explain', 'develop', 'carry', 'break', 'receive', 'agree', 'support', 'hit', 'produce', 'eat', 'cover', 'catch', 'draw', 'choose', 'clean', 'wash', 'cook', 'drive', 'fly', 'sing', 'dance', 'laugh', 'smile', 'cry', 'sleep', 'wake', 'dream', 'hope', 'wish', 'pray', 'thank', 'greet', 'welcome', 'invite', 'visit', 'travel', 'arrive', 'depart', 'pack', 'unpack', 'wear', 'dress', 'undress', 'shower', 'bathe', 'brush', 'comb', 'shave', 'cut', 'trim', 'paint', 'draw', 'sketch', 'write', 'type', 'print', 'copy', 'paste', 'delete', 'save', 'load', 'upload', 'download', 'share', 'send', 'receive', 'reply', 'forward', 'call', 'text', 'message', 'chat', 'talk', 'speak', 'whisper', 'shout', 'scream', 'yell', 'whistle', 'hum', 'sing', 'dance', 'jump', 'hop', 'skip', 'run', 'walk', 'jog', 'sprint', 'race', 'compete', 'win', 'lose', 'tie', 'draw', 'score', 'play', 'practice', 'train', 'exercise', 'stretch', 'bend', 'lift', 'carry', 'push', 'pull', 'drag', 'drop', 'throw', 'catch', 'kick', 'hit', 'punch', 'slap', 'pat', 'touch', 'feel', 'hold', 'grab', 'grasp', 'release', 'let', 'go', 'drop', 'place', 'put', 'set', 'lay', 'stand', 'sit', 'lie', 'kneel', 'crouch', 'squat', 'lean', 'bend', 'stretch', 'reach', 'extend', 'pull', 'push', 'lift', 'raise', 'lower', 'drop', 'fall', 'trip', 'slip', 'slide', 'roll', 'turn', 'spin', 'rotate', 'twist', 'bend', 'fold', 'unfold', 'open', 'close', 'shut', 'lock', 'unlock', 'key', 'enter', 'exit', 'leave', 'arrive', 'come', 'go', 'return', 'depart', 'travel', 'journey', 'trip', 'visit', 'tour', 'explore', 'discover', 'find', 'search', 'look', 'see', 'watch', 'observe', 'notice', 'spot', 'recognize', 'identify', 'know', 'remember', 'forget', 'recall', 'remind', 'think', 'consider', 'ponder', 'wonder', 'question', 'ask', 'answer', 'reply', 'respond', 'say', 'speak', 'talk', 'tell', 'inform', 'announce', 'declare', 'state', 'claim', 'mention', 'discuss', 'chat', 'converse', 'communicate', 'express', 'share', 'reveal', 'hide', 'conceal', 'show', 'display', 'demonstrate', 'present', 'exhibit', 'perform', 'act', 'play', 'pretend', 'imagine', 'dream', 'wish', 'hope', 'want', 'desire', 'need', 'require', 'demand', 'request', 'ask', 'beg', 'plead', 'pray', 'wish', 'hope', 'expect', 'anticipate', 'wait', 'stay', 'remain', 'keep', 'maintain', 'preserve', 'save', 'store', 'keep', 'hold', 'retain', 'possess', 'own', 'have', 'get', 'obtain', 'acquire', 'gain', 'earn', 'win', 'achieve', 'accomplish', 'complete', 'finish', 'end', 'stop', 'cease', 'quit', 'give', 'up', 'surrender', 'yield', 'submit', 'accept', 'reject', 'refuse', 'deny', 'decline', 'turn', 'down', 'agree', 'disagree', 'approve', 'disapprove', 'like', 'dislike', 'love', 'hate', 'adore', 'despise', 'enjoy', 'prefer', 'choose', 'select', 'pick', 'decide', 'determine', 'resolve', 'solve', 'fix', 'repair', 'mend', 'break', 'damage', 'destroy', 'ruin', 'spoil', 'waste', 'save', 'spare', 'preserve', 'protect', 'defend', 'guard', 'shield', 'shelter', 'hide', 'cover', 'uncover', 'reveal', 'expose', 'show', 'display', 'present', 'demonstrate', 'explain', 'describe', 'define', 'clarify', 'illustrate', 'teach', 'learn', 'study', 'read', 'write', 'type', 'print', 'copy', 'paste', 'cut', 'delete', 'erase', 'remove', 'add', 'insert', 'include', 'exclude', 'omit', 'skip', 'miss', 'catch', 'grab', 'seize', 'take', 'get', 'obtain', 'acquire', 'receive', 'accept', 'collect', 'gather', 'accumulate', 'amass', 'hoard', 'store', 'save', 'keep', 'preserve', 'maintain', 'sustain', 'support', 'help', 'assist', 'aid', 'serve', 'benefit', 'favor', 'prefer', 'choose', 'select', 'pick', 'elect', 'vote', 'decide', 'determine', 'resolve', 'solve', 'fix', 'repair', 'mend', 'heal', 'cure', 'treat', 'care', 'nurse', 'tend', 'look', 'after', 'watch', 'over', 'supervise', 'manage', 'control', 'direct', 'guide', 'lead', 'command', 'order', 'instruct', 'teach', 'educate', 'train', 'coach', 'mentor', 'advise', 'counsel', 'suggest', 'recommend', 'propose', 'offer', 'provide', 'supply', 'give', 'donate', 'contribute', 'share', 'distribute', 'divide', 'split', 'separate', 'unite', 'join', 'connect', 'link', 'attach', 'detach', 'separate', 'divide', 'split', 'cut', 'slice', 'chop', 'dice', 'mince', 'grind', 'crush', 'smash', 'break', 'shatter', 'crack', 'fracture', 'tear', 'rip', 'tear', 'pull', 'yank', 'tug', 'drag', 'pull', 'push', 'shove', 'thrust', 'throw', 'toss', 'hurl', 'fling', 'pitch', 'cast', 'launch', 'fire', 'shoot', 'aim', 'target', 'hit', 'miss', 'strike', 'beat', 'hit', 'punch', 'slap', 'pat', 'tap', 'knock', 'bang', 'strike', 'hit', 'collide', 'crash', 'bump', 'touch', 'contact', 'meet', 'encounter', 'face', 'confront', 'approach', 'near', 'reach', 'arrive', 'get', 'to', 'come', 'go', 'move', 'travel', 'journey', 'trip', 'voyage', 'cruise', 'sail', 'fly', 'drive', 'ride', 'walk', 'run', 'jog', 'sprint', 'race', 'compete', 'participate', 'join', 'enter', 'attend', 'visit', 'tour', 'explore', 'discover', 'find', 'locate', 'spot', 'see', 'notice', 'observe', 'watch', 'look', 'glance', 'glimpse', 'stare', 'gaze', 'peer', 'peek', 'peep', 'watch', 'observe', 'monitor', 'supervise', 'oversee', 'manage', 'control', 'direct', 'guide', 'lead', 'command', 'order', 'instruct', 'teach', 'educate', 'train', 'coach', 'mentor', 'advise', 'counsel', 'suggest', 'recommend', 'propose', 'offer', 'provide', 'supply', 'give', 'donate', 'contribute', 'share', 'distribute', 'divide', 'split', 'separate', 'unite', 'join', 'connect', 'link', 'attach', 'detach', 'separate', 'divide', 'split', 'cut', 'slice', 'chop', 'dice', 'mince', 'grind', 'crush', 'smash', 'break', 'shatter', 'crack', 'fracture', 'tear', 'rip', 'tear', 'pull', 'yank', 'tug', 'drag', 'pull', 'push', 'shove', 'thrust', 'throw', 'toss', 'hurl', 'fling', 'pitch', 'cast', 'launch', 'fire', 'shoot', 'aim', 'target', 'hit', 'miss', 'strike', 'beat', 'hit', 'punch', 'slap', 'pat', 'tap', 'knock', 'bang', 'strike', 'hit', 'collide', 'crash', 'bump', 'touch', 'contact', 'meet', 'encounter', 'face', 'confront', 'approach', 'near', 'reach', 'arrive', 'get', 'to', 'come', 'go', 'move', 'travel', 'journey', 'trip', 'voyage', 'cruise', 'sail', 'fly', 'drive', 'ride', 'walk', 'run', 'jog', 'sprint', 'race', 'compete', 'participate', 'join', 'enter', 'attend', 'visit', 'tour', 'explore', 'discover', 'find', 'locate', 'spot', 'see', 'notice', 'observe', 'watch', 'look', 'glance', 'glimpse', 'stare', 'gaze', 'peer', 'peek', 'peep', 'watch', 'observe', 'monitor', 'supervise', 'oversee', 'manage', 'control', 'direct', 'guide', 'lead', 'command', 'order', 'instruct', 'teach', 'educate', 'train', 'coach', 'mentor', 'advise', 'counsel', 'suggest', 'recommend', 'propose', 'offer', 'provide', 'supply', 'give', 'donate', 'contribute', 'share', 'distribute', 'divide', 'split', 'separate', 'unite', 'join', 'connect', 'link', 'attach', 'detach', 'separate', 'divide', 'split', 'cut', 'slice', 'chop', 'dice', 'mince', 'grind', 'crush', 'smash', 'break', 'shatter', 'crack', 'fracture', 'tear', 'rip', 'tear', 'pull', 'yank', 'tug', 'drag', 'pull', 'push', 'shove', 'thrust', 'throw', 'toss', 'hurl', 'fling', 'pitch', 'cast', 'launch', 'fire', 'shoot', 'aim', 'target', 'hit', 'miss', 'strike', 'beat', 'hit', 'punch', 'slap', 'pat', 'tap', 'knock', 'bang', 'strike', 'hit', 'collide', 'crash', 'bump', 'touch', 'contact', 'meet', 'encounter', 'face', 'confront', 'approach', 'near', 'reach', 'arrive', 'get', 'to', 'come', 'go', 'move', 'travel', 'journey', 'trip', 'voyage', 'cruise', 'sail', 'fly', 'drive', 'ride', 'walk', 'run', 'jog', 'sprint', 'race', 'compete', 'participate', 'join', 'enter', 'attend', 'visit', 'tour', 'explore', 'discover', 'find', 'locate', 'spot', 'see', 'notice', 'observe', 'watch', 'look', 'glance', 'glimpse', 'stare', 'gaze', 'peer', 'peek', 'peep'],
     'keluarga': ['love', 'care', 'support', 'protect', 'nurture', 'raise', 'teach', 'guide', 'discipline', 'encourage', 'praise', 'scold', 'forgive', 'trust', 'respect', 'honor', 'cherish', 'treasure', 'value', 'appreciate', 'admire', 'adore', 'worship', 'idolize', 'revere', 'venerate', 'honor', 'praise', 'compliment', 'flatter', 'charm', 'captivate', 'enchant', 'bewitch', 'mesmerize', 'hypnotize', 'fascinate', 'intrigue', 'interest', 'attract', 'draw', 'pull', 'lure', 'entice', 'tempt', 'seduce', 'allure'],
     'teman': ['befriend', 'meet', 'greet', 'welcome', 'introduce', 'socialize', 'mingle', 'chat', 'talk', 'converse', 'discuss', 'share', 'exchange', 'communicate', 'connect', 'bond', 'unite', 'join', 'associate', 'accompany', 'follow', 'support', 'help', 'assist', 'aid', 'back', 'endorse', 'approve', 'sanction', 'authorize', 'permit', 'allow', 'enable', 'facilitate'],
     'marketing': ['promote', 'advertise', 'publicize', 'brand', 'position', 'market', 'sell', 'pitch', 'present', 'demonstrate', 'showcase', 'highlight', 'emphasize', 'feature', 'spotlight', 'launch', 'release', 'introduce', 'unveil', 'reveal', 'announce', 'declare', 'proclaim', 'broadcast', 'disseminate', 'spread', 'circulate', 'distribute', 'share', 'post', 'publish', 'upload', 'upload', 'stream', 'live', 'broadcast', 'telecast', 'webcast', 'podcast', 'vlog', 'blog', 'tweet', 'post', 'share', 'like', 'comment', 'reply', 'retweet', 'repost', 'forward', 'send', 'deliver', 'dispatch', 'distribute', 'allocate', 'assign', 'delegate', 'authorize', 'authenticate', 'verify', 'validate', 'confirm', 'approve', 'reject', 'deny', 'block', 'allow', 'permit', 'grant', 'revoke', 'cancel', 'terminate'],
@@ -1464,6 +1499,107 @@ function getVerbForms(verb) {
     }
 }
 
+// Function untuk generate varied example sentences (natural conversation style)
+function generateVariedExamples(verb, verbForms, meaning) {
+    const templates = [
+        // Present simple - everyday activities
+        { en: `I usually ${verbForms.v1} in the morning.`, id: `Saya biasanya ${meaning} di pagi hari.` },
+        { en: `She ${verbForms.v1}s every weekend.`, id: `Dia ${meaning} setiap akhir pekan.` },
+        { en: `We often ${verbForms.v1} together.`, id: `Kami sering ${meaning} bersama.` },
+        { en: `They ${verbForms.v1} at the local cafe.`, id: `Mereka ${meaning} di kafe lokal.` },
+        
+        // Past simple - completed actions
+        { en: `I ${verbForms.v2} it yesterday.`, id: `Saya ${meaning} kemarin.` },
+        { en: `She ${verbForms.v2} that last week.`, id: `Dia ${meaning} minggu lalu.` },
+        { en: `We ${verbForms.v2} there last month.`, id: `Kami ${meaning} di sana bulan lalu.` },
+        { en: `They ${verbForms.v2} it quickly.`, id: `Mereka ${meaning} dengan cepat.` },
+        
+        // Present perfect - recent experiences
+        { en: `I have ${verbForms.v3} this before.`, id: `Saya pernah ${meaning} ini sebelumnya.` },
+        { en: `She has ${verbForms.v3} it already.`, id: `Dia sudah ${meaning} itu.` },
+        { en: `We have never ${verbForms.v3} that.`, id: `Kami belum pernah ${meaning} itu.` },
+        { en: `Have you ${verbForms.v3} this yet?`, id: `Apakah kamu sudah ${meaning} ini?` },
+        
+        // Questions - natural conversation
+        { en: `Do you ${verbForms.v1} regularly?`, id: `Apakah kamu ${meaning} secara teratur?` },
+        { en: `When did you ${verbForms.v1} it?`, id: `Kapan kamu ${meaning} itu?` },
+        { en: `Why don't we ${verbForms.v1} together?`, id: `Mengapa kita tidak ${meaning} bersama?` },
+        { en: `Can you ${verbForms.v1} this for me?`, id: `Bisakah kamu ${meaning} ini untuk saya?` },
+        
+        // Future/Intentions
+        { en: `I will ${verbForms.v1} it tomorrow.`, id: `Saya akan ${meaning} besok.` },
+        { en: `She is going to ${verbForms.v1} soon.`, id: `Dia akan ${meaning} segera.` },
+        { en: `We should ${verbForms.v1} more often.`, id: `Kita seharusnya ${meaning} lebih sering.` },
+        
+        // Continuous/Progressive
+        { en: `I am ${verbForms.v1}ing right now.`, id: `Saya sedang ${meaning} sekarang.` },
+        { en: `She was ${verbForms.v1}ing when I called.`, id: `Dia sedang ${meaning} ketika saya menelepon.` },
+        
+        // With objects/complements
+        { en: `I ${verbForms.v1} coffee every morning.`, id: `Saya ${meaning} kopi setiap pagi.` },
+        { en: `She ${verbForms.v2} a great book.`, id: `Dia ${meaning} buku yang bagus.` },
+        { en: `We ${verbForms.v1} at the new restaurant.`, id: `Kami ${meaning} di restoran baru.` },
+        
+        // Conditional/Modal
+        { en: `I would ${verbForms.v1} if I had time.`, id: `Saya akan ${meaning} jika saya punya waktu.` },
+        { en: `You could ${verbForms.v1} it easily.`, id: `Kamu bisa ${meaning} dengan mudah.` },
+        { en: `They might ${verbForms.v1} later.`, id: `Mereka mungkin ${meaning} nanti.` }
+    ];
+    
+    // Select 3 random unique templates
+    const selected = [];
+    const usedIndices = new Set();
+    
+    while (selected.length < 3 && selected.length < templates.length) {
+        const randomIndex = Math.floor(Math.random() * templates.length);
+        if (!usedIndices.has(randomIndex)) {
+            usedIndices.add(randomIndex);
+            selected.push(templates[randomIndex]);
+        }
+    }
+    
+    return selected;
+}
+
+// Function untuk generate varied quiz questions
+function generateVariedQuiz(verb, verbForms) {
+    const quizTemplates = [
+        {
+            question: `Choose the correct form: I ___ it yesterday.`,
+            options: [verbForms.v1, verbForms.v2, verbForms.v3, verbForms.v1 + 'ing'],
+            correct: 1
+        },
+        {
+            question: `Which form is correct? She has ___ the task.`,
+            options: [verbForms.v1, verbForms.v2, verbForms.v3, verbForms.v1 + 'ing'],
+            correct: 2
+        },
+        {
+            question: `Fill in the blank: They ___ every day.`,
+            options: [verbForms.v1, verbForms.v2, verbForms.v3, verbForms.v1 + 'ing'],
+            correct: 0
+        },
+        {
+            question: `Complete: We ___ there last week.`,
+            options: [verbForms.v1, verbForms.v2, verbForms.v3, verbForms.v1 + 'ing'],
+            correct: 1
+        },
+        {
+            question: `What is the past tense of "${verbForms.v1}"?`,
+            options: [verbForms.v1, verbForms.v2, verbForms.v3, verbForms.v1 + 'ing'],
+            correct: 1
+        },
+        {
+            question: `Select the past participle: Have you ___ this before?`,
+            options: [verbForms.v1, verbForms.v2, verbForms.v3, verbForms.v1 + 'ing'],
+            correct: 2
+        }
+    ];
+    
+    // Return a random quiz template
+    return quizTemplates[Math.floor(Math.random() * quizTemplates.length)];
+}
+
 // Function untuk translate ke bahasa Indonesia
 async function translateToIndonesian(text) {
     try {
@@ -1522,24 +1658,22 @@ async function fetchWordFromAPI(word) {
                 });
             }
             
-            // Jika tidak ada contoh dari API, buat contoh sederhana
-            if (translatedExamples.length === 0) {
-                translatedExamples.push({
-                    sentence: `I ${word} every day.`,
-                    translation: await translateToIndonesian(`I ${word} every day.`)
-                });
-            }
-            
             // Get verb forms
             const verbForms = getVerbForms(word);
             
-            // Generate quiz
-            const quizOptions = [verbForms.v1, verbForms.v2, verbForms.v3, verbForms.v1 + 'ing'];
-            const quiz = {
-                question: `Complete: I ___ ${word} yesterday.`,
-                options: quizOptions,
-                correct: 1
-            };
+            // Jika tidak ada contoh dari API, gunakan varied examples
+            if (translatedExamples.length === 0) {
+                const exampleTemplates = generateVariedExamples(word, verbForms, translatedDefinition);
+                for (const template of exampleTemplates) {
+                    translatedExamples.push({
+                        sentence: template.en,
+                        translation: template.id
+                    });
+                }
+            }
+            
+            // Generate varied quiz
+            const quiz = generateVariedQuiz(word, verbForms);
             
             // Determine category (simple heuristic)
             let category = 'sehari-hari';
@@ -1592,6 +1726,13 @@ async function generateBulkVocabulary() {
     
     let totalGenerated = 0;
     
+    // Get all existing vocabulary to check duplicates (once for all categories)
+    const allVocab = getAllVocabulary();
+    let existingV1s = new Set(allVocab.map(v => v.v1.toLowerCase()));
+    
+    // Get starting max ID
+    let currentMaxId = vocabularyData.length > 0 ? Math.max(...vocabularyData.map(v => v.id || 0)) : 0;
+    
     for (const category of categories) {
         const existingCount = vocabularyData.filter(v => v.category === category).length;
         const needed = Math.max(0, vocabPerCategory - existingCount);
@@ -1601,36 +1742,43 @@ async function generateBulkVocabulary() {
         const patterns = verbPatterns[category] || verbPatterns['sehari-hari'];
         const generated = [];
         
-        // Get all existing vocabulary to check duplicates
-        const allVocab = getAllVocabulary();
-        const existingV1s = new Set(allVocab.map(v => v.v1.toLowerCase()));
-        
-        // Get unique ID before loop
-        const maxId = vocabularyData.length > 0 ? Math.max(...vocabularyData.map(v => v.id || 0)) : 0;
-        
         let attempts = 0;
-        const maxAttempts = needed * 3; // Try up to 3x needed to find unique verbs
+        const maxAttempts = needed * 10; // Try up to 10x needed to find unique verbs
         
+        const prefixes = ['re', 'un', 'over', 'under', 'out', 'in', 'up', 'down', 'pre', 'post', 'mis', 'dis', 'de', 'en', 'ex', 'co', 'sub', 'super', 'inter', 'trans'];
+        
+        // Try to generate exactly needed amount
         while (generated.length < needed && attempts < maxAttempts) {
             attempts++;
-            const patternIndex = attempts % patterns.length;
+            
+            // Cycle through patterns more systematically
+            const patternIndex = (generated.length + attempts - 1) % patterns.length;
             const baseVerb = patterns[patternIndex];
             
-            // Create unique verb by adding prefix/suffix
+            // Create unique verb by adding prefix
             let verb = baseVerb;
-            const prefixIndex = Math.floor(attempts / patterns.length) % 10;
-            if (prefixIndex > 0) {
-                const prefix = ['re', 'un', 'over', 'under', 'out', 'in', 'up', 'down', 'pre', 'post'][prefixIndex - 1];
-                verb = prefix + baseVerb;
+            const cycleCount = Math.floor((generated.length + attempts - 1) / patterns.length);
+            if (cycleCount > 0) {
+                const prefixIndex = (cycleCount - 1) % prefixes.length;
+                verb = prefixes[prefixIndex] + baseVerb;
+            }
+            
+            // Also try with number suffix if still not enough
+            if (generated.length < needed && attempts > patterns.length * prefixes.length) {
+                const numSuffix = Math.floor((attempts - patterns.length * prefixes.length) / patterns.length);
+                if (numSuffix > 0 && numSuffix < 100) {
+                    verb = baseVerb + numSuffix;
+                }
             }
             
             // Skip if already exists or invalid
-            if (existingV1s.has(verb.toLowerCase()) || verb.length < 2) {
+            const verbLower = verb.toLowerCase();
+            if (existingV1s.has(verbLower) || verb.length < 2 || verb.length > 20) {
                 continue;
             }
             
-            // Mark as used
-            existingV1s.add(verb.toLowerCase());
+            // Mark as used immediately
+            existingV1s.add(verbLower);
             
             const verbForms = getVerbForms(verb);
             
@@ -1644,8 +1792,32 @@ async function generateBulkVocabulary() {
             
             const level = determineLevel(verb);
             
+            // Calculate ID based on current total
+            currentMaxId++;
+            
+            // Generate varied examples
+            const exampleTemplates = generateVariedExamples(verb, verbForms, meaning);
+            const examples = [];
+            for (const template of exampleTemplates) {
+                try {
+                    const translated = await translateToIndonesian(template.en);
+                    examples.push({
+                        sentence: template.en,
+                        translation: translated || template.id
+                    });
+                } catch (e) {
+                    examples.push({
+                        sentence: template.en,
+                        translation: template.id
+                    });
+                }
+            }
+            
+            // Generate varied quiz
+            const quiz = generateVariedQuiz(verb, verbForms);
+            
             generated.push({
-                id: maxId + generated.length + 1,
+                id: currentMaxId,
                 v1: verbForms.v1,
                 v2: verbForms.v2,
                 v3: verbForms.v3,
@@ -1653,30 +1825,28 @@ async function generateBulkVocabulary() {
                 type: verbForms.type,
                 category: category,
                 level: level,
-                examples: [{
-                    sentence: `I ${verb} every day.`,
-                    translation: `Saya ${meaning} setiap hari.`
-                }],
-                quiz: {
-                    question: `Complete: I ___ ${verb} yesterday.`,
-                    options: [verbForms.v1, verbForms.v2, verbForms.v3, verbForms.v1 + 'ing'],
-                    correct: 1
-                }
+                examples: examples,
+                quiz: quiz
             });
             
             totalGenerated++;
-            if (totalGenerated % 100 === 0) {
+            if (totalGenerated % 50 === 0) {
                 if (loadingIndicator) {
-                    loadingIndicator.querySelector('span').textContent = `Generated ${totalGenerated} vocabulary...`;
+                    loadingIndicator.querySelector('span').textContent = `Generated ${totalGenerated} vocabulary... (${category}: ${generated.length}/${needed})`;
                 }
                 await new Promise(resolve => setTimeout(resolve, 50));
             }
         }
         
+        // Add generated to vocabularyData
         vocabularyData.push(...generated);
         
-        // Update existingV1s for next category
+        // Update existingV1s for next category (already done in loop, but ensure)
         generated.forEach(v => existingV1s.add(v.v1.toLowerCase()));
+        
+        if (generated.length < needed) {
+            console.warn(`Warning: Only generated ${generated.length} out of ${needed} for category ${category}`);
+        }
     }
     
     return totalGenerated;
@@ -1702,29 +1872,51 @@ async function generateCategoryVocabulary(category) {
     const allVocab = getAllVocabulary();
     const existingV1s = new Set(allVocab.map(v => v.v1.toLowerCase()));
     const generated = [];
-    const maxId = vocabularyData.length > 0 ? Math.max(...vocabularyData.map(v => v.id || 0)) : 0;
+    let currentMaxId = vocabularyData.length > 0 ? Math.max(...vocabularyData.map(v => v.id || 0)) : 0;
     
     let attempts = 0;
-    const maxAttempts = needed * 3; // Try up to 3x needed to find unique verbs
+    const maxAttempts = needed * 20; // Increase attempts for better coverage
     
+    // Use patterns directly, ensuring uniqueness
+    const usedPatterns = new Set();
+    
+    // Try to generate exactly needed amount
     while (generated.length < needed && attempts < maxAttempts) {
         attempts++;
-        const patternIndex = attempts % patterns.length;
-        const baseVerb = patterns[patternIndex];
         
-        // Create unique verb by adding prefix/suffix
-        let verb = baseVerb;
-        const prefixIndex = Math.floor(attempts / patterns.length) % 10;
-        if (prefixIndex > 0) {
-            const prefix = ['re', 'un', 'over', 'under', 'out', 'in', 'up', 'down', 'pre', 'post'][prefixIndex - 1];
-            verb = prefix + baseVerb;
+        // Cycle through patterns systematically
+        let verb = null;
+        let patternIndex = (generated.length + attempts) % patterns.length;
+        let baseVerb = patterns[patternIndex];
+        
+        // Try base verb first
+        if (!existingV1s.has(baseVerb.toLowerCase()) && !usedPatterns.has(baseVerb.toLowerCase())) {
+            verb = baseVerb;
+            usedPatterns.add(baseVerb.toLowerCase());
+        } else {
+            // Try variations only if base verb is taken
+            const prefixes = ['re', 'un', 'over', 'under', 'out', 'pre', 'mis', 'dis'];
+            for (let i = 0; i < prefixes.length && !verb; i++) {
+                const prefixedVerb = prefixes[i] + baseVerb;
+                if (!existingV1s.has(prefixedVerb.toLowerCase()) && prefixedVerb.length <= 20) {
+                    verb = prefixedVerb;
+                    usedPatterns.add(prefixedVerb.toLowerCase());
+                }
+            }
         }
         
-        if (existingV1s.has(verb.toLowerCase()) || verb.length < 2) {
+        // Skip if no valid verb found
+        if (!verb || verb.length < 2 || verb.length > 20) {
             continue;
         }
         
-        existingV1s.add(verb.toLowerCase());
+        const verbLower = verb.toLowerCase();
+        if (existingV1s.has(verbLower)) {
+            continue;
+        }
+        
+        // Mark as used immediately
+        existingV1s.add(verbLower);
         const verbForms = getVerbForms(verb);
         const level = determineLevel(verb);
         
@@ -1735,8 +1927,31 @@ async function generateCategoryVocabulary(category) {
             meaning = verb;
         }
         
+        currentMaxId++;
+        
+        // Generate varied examples
+        const exampleTemplates = generateVariedExamples(verb, verbForms, meaning);
+        const examples = [];
+        for (const template of exampleTemplates) {
+            try {
+                const translated = await translateToIndonesian(template.en);
+                examples.push({
+                    sentence: template.en,
+                    translation: translated || template.id
+                });
+            } catch (e) {
+                examples.push({
+                    sentence: template.en,
+                    translation: template.id
+                });
+            }
+        }
+        
+        // Generate varied quiz
+        const quiz = generateVariedQuiz(verb, verbForms);
+        
         generated.push({
-            id: maxId + generated.length + 1,
+            id: currentMaxId,
             v1: verbForms.v1,
             v2: verbForms.v2,
             v3: verbForms.v3,
@@ -1744,21 +1959,18 @@ async function generateCategoryVocabulary(category) {
             type: verbForms.type,
             category: category,
             level: level,
-            examples: [{
-                sentence: `I ${verb} every day.`,
-                translation: `Saya ${meaning} setiap hari.`
-            }],
-            quiz: {
-                question: `Complete: I ___ ${verb} yesterday.`,
-                options: [verbForms.v1, verbForms.v2, verbForms.v3, verbForms.v1 + 'ing'],
-                correct: 1
-            }
+            examples: examples,
+            quiz: quiz
         });
         
         if (generated.length % 20 === 0 && loadingIndicator) {
-            loadingIndicator.querySelector('span').textContent = `Generated ${generated.length} vocabulary untuk ${category}...`;
+            loadingIndicator.querySelector('span').textContent = `Generated ${generated.length}/${needed} vocabulary untuk ${category}...`;
             await new Promise(resolve => setTimeout(resolve, 50));
         }
+    }
+    
+    if (generated.length < needed) {
+        console.warn(`Warning: Only generated ${generated.length} out of ${needed} for category ${category}`);
     }
     
     vocabularyData.push(...generated);
@@ -2097,7 +2309,7 @@ function renderVocabList(data = vocabularyData) {
         const categoryColor = categoryColors[vocab.category] || '#6366f1';
         card.innerHTML = `
             <div class="vocab-header">
-                <div style="display: flex; flex-direction: column; gap: 0.5rem;">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
                     <span class="vocab-word">${vocab.v1}</span>
                     <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                         <span class="vocab-category" style="background: ${categoryColor}20; color: ${categoryColor}; border: 1px solid ${categoryColor}40; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">
@@ -2109,6 +2321,10 @@ function renderVocabList(data = vocabularyData) {
                         <span class="vocab-type">${vocab.type === 'irregular' ? 'Tidak Beraturan' : 'Beraturan'}</span>
                     </div>
                 </div>
+                <label class="word-bank-checkbox" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" ${isInWordBank(vocab.id) ? 'checked' : ''} onchange="toggleWordBank(${vocab.id}, this)" style="width: 20px; height: 20px; cursor: pointer;">
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Word Bank</span>
+                </label>
             </div>
             <div class="verb-forms">
                 <div class="verb-form">
@@ -2424,3 +2640,123 @@ function closeQuiz() {
     currentQuiz = null;
 }
 
+// Word Bank Toggle Function
+function toggleWordBank(vocabId, checkbox) {
+    if (checkbox.checked) {
+        if (addToWordBank(vocabId)) {
+            // Remove from main page if in word bank view
+            const card = document.querySelector(`[data-vocab-id="${vocabId}"]`);
+            if (card && document.getElementById('wordBankSection') && document.getElementById('wordBankSection').style.display !== 'none') {
+                card.style.display = 'none';
+            }
+            showMessage('Ditambahkan ke Word Bank!', 'success');
+        }
+    } else {
+        if (removeFromWordBank(vocabId)) {
+            showMessage('Dihapus dari Word Bank!', 'success');
+        }
+    }
+    // Refresh word bank display if visible
+    if (document.getElementById('wordBankSection') && document.getElementById('wordBankSection').style.display !== 'none') {
+        renderWordBank();
+    }
+}
+
+// Render Word Bank
+function renderWordBank() {
+    const wordBankSection = document.getElementById('wordBankSection');
+    const wordBankList = document.getElementById('wordBankList');
+    const wordBankStatsText = document.getElementById('wordBankStatsText');
+    
+    if (!wordBankSection || !wordBankList) return;
+    
+    const wordBankIds = getWordBank();
+    const wordBankVocabs = vocabularyData.filter(v => wordBankIds.includes(v.id));
+    
+    if (wordBankStatsText) {
+        wordBankStatsText.textContent = `Word Bank: ${wordBankVocabs.length} vocabulary`;
+    }
+    
+    if (wordBankVocabs.length === 0) {
+        wordBankList.innerHTML = '<div class="glass-card" style="text-align: center; color: var(--text-muted); padding: 2rem;">Word Bank masih kosong. Centang checkbox pada vocabulary untuk menambahkannya ke Word Bank.</div>';
+        return;
+    }
+    
+    wordBankList.innerHTML = '';
+    
+    wordBankVocabs.forEach(vocab => {
+        const card = document.createElement('div');
+        card.className = 'vocab-card';
+        card.setAttribute('data-vocab-id', vocab.id);
+        const categoryColor = categoryColors[vocab.category] || '#6366f1';
+        card.innerHTML = `
+            <div class="vocab-header">
+                <div style="display: flex; flex-direction: column; gap: 0.5rem; flex: 1;">
+                    <span class="vocab-word">${vocab.v1}</span>
+                    <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                        <span class="vocab-category" style="background: ${categoryColor}20; color: ${categoryColor}; border: 1px solid ${categoryColor}40; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">
+                            ${vocab.category || 'Umum'}
+                        </span>
+                        ${vocab.level ? `<span class="vocab-level" style="background: ${vocab.level === 'beginner' ? '#22c55e' : vocab.level === 'intermediate' ? '#f59e0b' : '#ef4444'}20; color: ${vocab.level === 'beginner' ? '#22c55e' : vocab.level === 'intermediate' ? '#f59e0b' : '#ef4444'}; border: 1px solid ${vocab.level === 'beginner' ? '#22c55e' : vocab.level === 'intermediate' ? '#f59e0b' : '#ef4444'}40; padding: 0.3rem 0.8rem; border-radius: 8px; font-size: 0.75rem; font-weight: 500;">
+                            ${vocab.level === 'beginner' ? 'Beginner' : vocab.level === 'intermediate' ? 'Intermediate' : 'Advanced'}
+                        </span>` : ''}
+                        <span class="vocab-type">${vocab.type === 'irregular' ? 'Tidak Beraturan' : 'Beraturan'}</span>
+                    </div>
+                </div>
+                <label class="word-bank-checkbox" style="cursor: pointer; display: flex; align-items: center; gap: 0.5rem;">
+                    <input type="checkbox" checked onchange="toggleWordBank(${vocab.id}, this)" style="width: 20px; height: 20px; cursor: pointer;">
+                    <span style="font-size: 0.85rem; color: var(--text-secondary);">Word Bank</span>
+                </label>
+            </div>
+            <div class="verb-forms">
+                <div class="verb-form">
+                    <span class="verb-form-label">V1</span>
+                    <span class="verb-form-value">${vocab.v1}</span>
+                </div>
+                <div class="verb-form">
+                    <span class="verb-form-label">V2</span>
+                    <span class="verb-form-value">${vocab.v2}</span>
+                </div>
+                <div class="verb-form">
+                    <span class="verb-form-label">V3</span>
+                    <span class="verb-form-value">${vocab.v3}</span>
+                </div>
+            </div>
+            <div class="meaning">
+                <span class="meaning-label">Arti:</span>
+                <span class="meaning-text">${vocab.meaning}</span>
+            </div>
+            <div class="example">
+                <span class="example-label">Contoh Kalimat:</span>
+                <div class="example-text">${vocab.examples[0].sentence}</div>
+                <div class="example-translation">${vocab.examples[0].translation}</div>
+            </div>
+            <div class="action-buttons">
+                <button class="btn btn-quiz" onclick="startQuiz(${vocab.id})">Latihan Soal</button>
+                <button class="btn btn-example" onclick="showExamples(${vocab.id})">Lihat Contoh</button>
+            </div>
+        `;
+        wordBankList.appendChild(card);
+    });
+}
+
+// Toggle Word Bank View
+function toggleWordBankView() {
+    const wordBankSection = document.getElementById('wordBankSection');
+    const mainContent = document.querySelector('.main-content');
+    const wordBankBtn = document.getElementById('wordBankBtn');
+    
+    if (!wordBankSection || !mainContent) return;
+    
+    if (wordBankSection.style.display === 'none' || !wordBankSection.style.display) {
+        wordBankSection.style.display = 'block';
+        mainContent.style.display = 'none';
+        if (wordBankBtn) wordBankBtn.textContent = '← Kembali ke Vocabulary';
+        renderWordBank();
+    } else {
+        wordBankSection.style.display = 'none';
+        mainContent.style.display = 'block';
+        if (wordBankBtn) wordBankBtn.textContent = '📚 Word Bank';
+        filterAndSearch(document.getElementById('searchInput').value);
+    }
+}
