@@ -1364,6 +1364,245 @@ function isInWordBank(vocabId) {
     return getWordBank().includes(vocabId);
 }
 
+// Progress Tracking System
+function getProgress() {
+    const saved = localStorage.getItem('vocabProgress');
+    return saved ? JSON.parse(saved) : {};
+}
+
+function saveProgress(progress) {
+    localStorage.setItem('vocabProgress', JSON.stringify(progress));
+}
+
+function updateProgress(vocabId, isCorrect) {
+    const progress = getProgress();
+    if (!progress[vocabId]) {
+        progress[vocabId] = { correct: 0, incorrect: 0, lastReview: null, nextReview: Date.now(), ease: 2.5 };
+    }
+    
+    if (isCorrect) {
+        progress[vocabId].correct++;
+        progress[vocabId].ease = Math.min(2.5, progress[vocabId].ease + 0.1);
+    } else {
+        progress[vocabId].incorrect++;
+        progress[vocabId].ease = Math.max(1.3, progress[vocabId].ease - 0.2);
+    }
+    
+    progress[vocabId].lastReview = Date.now();
+    // Spaced repetition: next review based on ease factor
+    const daysUntilNext = Math.ceil(progress[vocabId].ease);
+    progress[vocabId].nextReview = Date.now() + (daysUntilNext * 24 * 60 * 60 * 1000);
+    
+    saveProgress(progress);
+    return progress[vocabId];
+}
+
+function getVocabProgress(vocabId) {
+    const progress = getProgress();
+    return progress[vocabId] || { correct: 0, incorrect: 0, lastReview: null, nextReview: Date.now(), ease: 2.5 };
+}
+
+// Spaced Repetition - Get words that need review
+function getWordsForReview() {
+    const wordBank = getWordBank();
+    const progress = getProgress();
+    const now = Date.now();
+    
+    return wordBank.filter(id => {
+        const vocabProgress = progress[id] || { nextReview: 0 };
+        return vocabProgress.nextReview <= now;
+    });
+}
+
+// Search History & Favorites
+function getSearchHistory() {
+    const saved = localStorage.getItem('searchHistory');
+    return saved ? JSON.parse(saved) : [];
+}
+
+function addToSearchHistory(term) {
+    if (!term || term.trim() === '') return;
+    const history = getSearchHistory();
+    const termLower = term.toLowerCase().trim();
+    // Remove if exists, then add to front
+    const filtered = history.filter(h => h.toLowerCase() !== termLower);
+    filtered.unshift(term);
+    // Keep only last 20
+    const limited = filtered.slice(0, 20);
+    localStorage.setItem('searchHistory', JSON.stringify(limited));
+}
+
+function getFavorites() {
+    const saved = localStorage.getItem('favorites');
+    return saved ? JSON.parse(saved) : [];
+}
+
+function toggleFavorite(vocabId) {
+    const favorites = getFavorites();
+    const index = favorites.indexOf(vocabId);
+    if (index > -1) {
+        favorites.splice(index, 1);
+    } else {
+        favorites.push(vocabId);
+    }
+    localStorage.setItem('favorites', JSON.stringify(favorites));
+    return index === -1;
+}
+
+function isFavorite(vocabId) {
+    return getFavorites().includes(vocabId);
+}
+
+// Export/Import Word Bank
+function exportWordBank(format = 'json') {
+    const wordBank = getWordBank();
+    const vocabData = wordBank.map(id => {
+        const vocab = vocabularyData.find(v => v.id === id);
+        return vocab ? {
+            v1: vocab.v1,
+            v2: vocab.v2,
+            v3: vocab.v3,
+            meaning: vocab.meaning,
+            category: vocab.category,
+            level: vocab.level
+        } : null;
+    }).filter(v => v !== null);
+    
+    if (format === 'csv') {
+        const headers = ['V1', 'V2', 'V3', 'Meaning', 'Category', 'Level'];
+        const rows = vocabData.map(v => [v.v1, v.v2, v.v3, v.meaning, v.category, v.level]);
+        const csv = [headers.join(','), ...rows.map(r => r.map(cell => `"${cell}"`).join(','))].join('\n');
+        const blob = new Blob([csv], { type: 'text/csv' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `word-bank-${new Date().toISOString().split('T')[0]}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    } else {
+        const json = JSON.stringify(vocabData, null, 2);
+        const blob = new Blob([json], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `word-bank-${new Date().toISOString().split('T')[0]}.json`;
+        a.click();
+        URL.revokeObjectURL(url);
+    }
+}
+
+function importWordBank(file) {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+        try {
+            const content = e.target.result;
+            let data;
+            
+            if (file.name.endsWith('.csv')) {
+                const lines = content.split('\n');
+                const headers = lines[0].split(',').map(h => h.replace(/"/g, '').trim());
+                data = lines.slice(1).map(line => {
+                    const values = line.split(',').map(v => v.replace(/"/g, '').trim());
+                    const obj = {};
+                    headers.forEach((h, i) => obj[h.toLowerCase()] = values[i]);
+                    return obj;
+                });
+            } else {
+                data = JSON.parse(content);
+            }
+            
+            // Match imported words with vocabularyData and add to word bank
+            const importedIds = [];
+            data.forEach(imported => {
+                const vocab = vocabularyData.find(v => 
+                    v.v1.toLowerCase() === imported.v1?.toLowerCase() ||
+                    (imported.v1 && v.v1.toLowerCase().includes(imported.v1.toLowerCase()))
+                );
+                if (vocab && !isInWordBank(vocab.id)) {
+                    addToWordBank(vocab.id);
+                    importedIds.push(vocab.id);
+                }
+            });
+            
+            showMessage(`${importedIds.length} vocabulary berhasil diimpor ke Word Bank!`, 'success');
+            if (document.getElementById('wordBankSection') && document.getElementById('wordBankSection').style.display !== 'none') {
+                renderWordBank();
+            }
+        } catch (error) {
+            showMessage('Error importing file: ' + error.message, 'error');
+        }
+    };
+    reader.readAsText(file);
+}
+
+// Audio Pronunciation (Text-to-Speech)
+function playPronunciation(text, lang = 'en-US') {
+    if ('speechSynthesis' in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.lang = lang;
+        utterance.rate = 0.8;
+        utterance.pitch = 1;
+        window.speechSynthesis.speak(utterance);
+    } else {
+        showMessage('Text-to-speech tidak didukung di browser ini', 'error');
+    }
+}
+
+// Theme Management (Dark/Light Mode)
+function getTheme() {
+    return localStorage.getItem('theme') || 'dark';
+}
+
+function setTheme(theme) {
+    localStorage.setItem('theme', theme);
+    document.body.setAttribute('data-theme', theme);
+    applyTheme(theme);
+}
+
+function applyTheme(theme) {
+    if (theme === 'light') {
+        document.documentElement.style.setProperty('--primary-color', '#6366f1');
+        document.documentElement.style.setProperty('--text-primary', '#1a1a2e');
+        document.documentElement.style.setProperty('--text-secondary', 'rgba(26, 26, 46, 0.8)');
+        document.documentElement.style.setProperty('--glass-bg', 'rgba(255, 255, 255, 0.8)');
+        document.documentElement.style.setProperty('--glass-border', 'rgba(0, 0, 0, 0.1)');
+        document.body.style.background = 'linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 50%, #e0e7ff 100%)';
+    } else {
+        document.documentElement.style.setProperty('--primary-color', '#6366f1');
+        document.documentElement.style.setProperty('--text-primary', '#ffffff');
+        document.documentElement.style.setProperty('--text-secondary', 'rgba(255, 255, 255, 0.8)');
+        document.documentElement.style.setProperty('--glass-bg', 'rgba(255, 255, 255, 0.05)');
+        document.documentElement.style.setProperty('--glass-border', 'rgba(255, 255, 255, 0.1)');
+        document.body.style.background = 'linear-gradient(135deg, #0f0c29 0%, #302b63 50%, #24243e 100%)';
+    }
+}
+
+// Keyboard Shortcuts
+function setupKeyboardShortcuts() {
+    document.addEventListener('keydown', function(e) {
+        // Ctrl/Cmd + K: Focus search
+        if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+            e.preventDefault();
+            document.getElementById('searchInput')?.focus();
+        }
+        // Ctrl/Cmd + B: Toggle Word Bank
+        if ((e.ctrlKey || e.metaKey) && e.key === 'b') {
+            e.preventDefault();
+            toggleWordBankView();
+        }
+        // Escape: Close modals
+        if (e.key === 'Escape') {
+            closeQuiz();
+        }
+        // Ctrl/Cmd + D: Toggle theme
+        if ((e.ctrlKey || e.metaKey) && e.key === 'd') {
+            e.preventDefault();
+            const currentTheme = getTheme();
+            setTheme(currentTheme === 'dark' ? 'light' : 'dark');
+        }
+    });
+}
+
 // Category colors mapping
 const categoryColors = {
     'sehari-hari': '#6366f1', 'perasaan': '#f59e0b', 'keluarga': '#ec4899', 'teman': '#8b5cf6',
@@ -1376,11 +1615,41 @@ const categoryColors = {
     'slang': '#ec4899', 'formal': '#8b5cf6', 'hukum': '#6366f1', 'politik': '#ef4444', 'lingkungan': '#10b981'
 };
 
-// Level mapping
+// Word frequency database (based on common English word frequency lists)
+// Higher frequency = more common = beginner level
+const wordFrequency = {
+    // Most common verbs (beginner) - top 100
+    'go': 100, 'get': 99, 'make': 98, 'know': 97, 'think': 96, 'take': 95, 'see': 94, 'come': 93, 'want': 92, 'use': 91,
+    'find': 90, 'give': 89, 'tell': 88, 'work': 87, 'call': 86, 'try': 85, 'ask': 84, 'need': 83, 'feel': 82, 'become': 81,
+    'leave': 80, 'put': 79, 'mean': 78, 'keep': 77, 'let': 76, 'begin': 75, 'seem': 74, 'help': 73, 'show': 72, 'hear': 71,
+    'play': 70, 'run': 69, 'move': 68, 'like': 67, 'live': 66, 'believe': 65, 'bring': 64, 'happen': 63, 'write': 62, 'sit': 61,
+    'stand': 60, 'lose': 59, 'pay': 58, 'meet': 57, 'include': 56, 'continue': 55, 'set': 54, 'learn': 53, 'change': 52, 'lead': 51,
+    'understand': 50, 'watch': 49, 'follow': 48, 'stop': 47, 'create': 46, 'speak': 45, 'read': 44, 'spend': 43, 'grow': 42, 'open': 41,
+    'walk': 40, 'win': 39, 'offer': 38, 'remember': 37, 'love': 36, 'consider': 35, 'appear': 34, 'buy': 33, 'wait': 32, 'serve': 31,
+    'die': 30, 'send': 29, 'build': 28, 'stay': 27, 'fall': 26, 'cut': 25, 'reach': 24, 'kill': 23, 'raise': 22, 'pass': 21,
+    'sell': 20, 'decide': 19, 'return': 18, 'explain': 17, 'develop': 16, 'carry': 15, 'break': 14, 'receive': 13, 'agree': 12, 'support': 11,
+    'hit': 10, 'produce': 9, 'eat': 8, 'cover': 7, 'catch': 6, 'draw': 5, 'choose': 4, 'clean': 3, 'wash': 2, 'cook': 1,
+    
+    // Intermediate verbs (frequency 30-70)
+    'manage': 50, 'invest': 49, 'negotiate': 48, 'analyze': 47, 'research': 46, 'design': 45, 'implement': 44, 'evaluate': 43,
+    'improve': 42, 'optimize': 41, 'organize': 40, 'coordinate': 39, 'supervise': 38, 'train': 37, 'guide': 36, 'direct': 35,
+    'execute': 34, 'operate': 33, 'maintain': 32, 'establish': 31, 'achieve': 30, 'accomplish': 29, 'complete': 28, 'perform': 27,
+    'conduct': 26, 'manage': 25, 'handle': 24, 'process': 23, 'review': 22, 'assess': 21, 'examine': 20, 'investigate': 19,
+    'explore': 18, 'discover': 17, 'identify': 16, 'define': 15, 'describe': 14, 'discuss': 13, 'argue': 12, 'debate': 11,
+    'critique': 10, 'compare': 9, 'contrast': 8, 'synthesize': 7, 'summarize': 6, 'paraphrase': 5, 'cite': 4, 'reference': 3,
+    
+    // Advanced verbs (frequency < 30, complex/long words)
+    'synthesize': 25, 'elucidate': 24, 'institutionalize': 23, 'systematize': 22, 'methodize': 21, 'standardize': 20,
+    'commercialize': 19, 'monetize': 18, 'capitalize': 17, 'leverage': 16, 'differentiate': 15, 'distinguish': 14,
+    'comprehend': 13, 'apprehend': 12, 'conceptualize': 11, 'philosophize': 10, 'theorize': 9, 'hypothesize': 8,
+    'methodologize': 7, 'operationalize': 6, 'conceptualize': 5, 'rationalize': 4, 'categorize': 3, 'prioritize': 2
+};
+
+// Level mapping (expanded)
 const levelMapping = {
-    'beginner': ['go', 'eat', 'see', 'take', 'come', 'get', 'make', 'know', 'think', 'give', 'find', 'tell', 'work', 'call', 'try', 'ask', 'need', 'want', 'use', 'help'],
-    'intermediate': ['manage', 'invest', 'negotiate', 'analyze', 'research', 'develop', 'create', 'design', 'implement', 'evaluate', 'improve', 'optimize', 'organize', 'coordinate', 'supervise', 'train', 'guide', 'lead', 'direct', 'execute'],
-    'advanced': ['synthesize', 'elucidate', 'institutionalize', 'systematize', 'methodize', 'standardize', 'commercialize', 'monetize', 'capitalize', 'leverage', 'differentiate', 'distinguish', 'comprehend', 'apprehend', 'comprehend', 'apprehend', 'comprehend', 'apprehend', 'comprehend', 'apprehend']
+    'beginner': Object.keys(wordFrequency).filter(w => wordFrequency[w] >= 50),
+    'intermediate': Object.keys(wordFrequency).filter(w => wordFrequency[w] >= 20 && wordFrequency[w] < 50),
+    'advanced': Object.keys(wordFrequency).filter(w => wordFrequency[w] < 20)
 };
 
 // Verb patterns untuk generate vocabulary
@@ -1452,19 +1721,46 @@ const irregularVerbs = {
     'hang': { v2: 'hung', v3: 'hung' }
 };
 
-// Helper function untuk menentukan level berdasarkan verb
+// Helper function untuk menentukan level berdasarkan verb dengan word frequency
 function determineLevel(verb) {
     const verbLower = verb.toLowerCase();
-    if (levelMapping.beginner.some(v => verbLower === v)) {
-        return 'beginner';
-    } else if (levelMapping.intermediate.some(v => verbLower === v || verbLower.includes(v))) {
-        return 'intermediate';
-    } else if (levelMapping.advanced.some(v => verbLower === v || verbLower.includes(v))) {
+    
+    // Check exact match in frequency database
+    if (wordFrequency[verbLower] !== undefined) {
+        const freq = wordFrequency[verbLower];
+        if (freq >= 50) return 'beginner';
+        if (freq >= 20) return 'intermediate';
         return 'advanced';
     }
-    // Default berdasarkan kompleksitas kata
+    
+    // Check if verb contains common beginner words
+    if (levelMapping.beginner.some(v => verbLower === v || verbLower.startsWith(v) || verbLower.endsWith(v))) {
+        return 'beginner';
+    }
+    
+    // Check if verb contains intermediate words
+    if (levelMapping.intermediate.some(v => verbLower === v || verbLower.includes(v))) {
+        return 'intermediate';
+    }
+    
+    // Check if verb contains advanced words
+    if (levelMapping.advanced.some(v => verbLower === v || verbLower.includes(v))) {
+        return 'advanced';
+    }
+    
+    // Heuristic based on word characteristics
+    // Check for complex prefixes/suffixes
+    const complexPrefixes = ['institutional', 'systemat', 'methodolog', 'operational', 'conceptual', 'philosoph', 'theor', 'hypothes'];
+    const complexSuffixes = ['ize', 'ify', 'ate'];
+    
+    if (complexPrefixes.some(p => verbLower.startsWith(p)) || 
+        (verbLower.length > 12 && complexSuffixes.some(s => verbLower.endsWith(s)))) {
+        return 'advanced';
+    }
+    
+    // Default berdasarkan kompleksitas kata dan panjang
     if (verb.length <= 4) return 'beginner';
-    if (verb.length <= 7) return 'intermediate';
+    if (verb.length <= 8) return 'intermediate';
     return 'advanced';
 }
 
@@ -2013,18 +2309,33 @@ function loadVocabularyFromStorage() {
                 const newItems = parsed.filter(v => !existingV1s.has(v.v1.toLowerCase()));
                 vocabularyData.push(...newItems);
                 
-                // Ensure unique IDs
+                // Ensure unique IDs and levels
                 let maxId = Math.max(...vocabularyData.map(v => v.id || 0), 0);
                 vocabularyData.forEach(v => {
                     if (!v.id) {
                         maxId++;
                         v.id = maxId;
                     }
+                    // Ensure all vocabulary has a level
+                    if (!v.level) {
+                        v.level = determineLevel(v.v1);
+                    }
                 });
+                
+                // Save updated data back
+                saveVocabularyToStorage();
             }
         } catch (e) {
             console.error('Error loading from localStorage:', e);
         }
+    } else {
+        // Ensure all existing vocabulary has level
+        vocabularyData.forEach(v => {
+            if (!v.level) {
+                v.level = determineLevel(v.v1);
+            }
+        });
+        saveVocabularyToStorage();
     }
 }
 
@@ -2046,14 +2357,69 @@ function showMessage(message, type = 'error') {
     }, 5000);
 }
 
+// Helper functions for UI
+function toggleFavoriteVocab(vocabId) {
+    const isAdded = toggleFavorite(vocabId);
+    showMessage(isAdded ? 'Ditambahkan ke Favorites!' : 'Dihapus dari Favorites!', 'success');
+    filterAndSearch(document.getElementById('searchInput').value);
+}
+
+function handleImport(event) {
+    const file = event.target.files[0];
+    if (file) {
+        importWordBank(file);
+    }
+    event.target.value = ''; // Reset input
+}
+
+function toggleTheme() {
+    const currentTheme = getTheme();
+    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+    setTheme(newTheme);
+    showMessage(`Theme diubah ke ${newTheme} mode`, 'success');
+}
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
+    // Setup keyboard shortcuts
+    setupKeyboardShortcuts();
+    
+    // Apply saved theme
+    const savedTheme = getTheme();
+    applyTheme(savedTheme);
+    
+    // Setup export menu
+    const exportMenuBtn = document.getElementById('exportMenuBtn');
+    const exportMenu = document.getElementById('exportMenu');
+    if (exportMenuBtn && exportMenu) {
+        exportMenuBtn.addEventListener('click', function(e) {
+            e.stopPropagation();
+            exportMenu.classList.toggle('show');
+        });
+        document.addEventListener('click', function() {
+            exportMenu.classList.remove('show');
+        });
+    }
+    
     // Load from localStorage first
     loadVocabularyFromStorage();
     
-    // Search functionality
-    document.getElementById('searchInput').addEventListener('input', function(e) {
-        filterAndSearch(e.target.value);
+    // Search functionality with history
+    const searchInput = document.getElementById('searchInput');
+    searchInput.addEventListener('input', function(e) {
+        const term = e.target.value;
+        filterAndSearch(term);
+        if (term.trim()) {
+            addToSearchHistory(term);
+        }
+    });
+    
+    // Show search history on focus
+    searchInput.addEventListener('focus', function() {
+        const history = getSearchHistory();
+        if (history.length > 0) {
+            // Could show dropdown with history here
+        }
     });
     
     // API Search button
@@ -2349,6 +2715,20 @@ function renderVocabList(data = vocabularyData) {
                 <div class="example-text">${vocab.examples[0].sentence}</div>
                 <div class="example-translation">${vocab.examples[0].translation}</div>
             </div>
+            <div style="display: flex; gap: 0.5rem; margin-top: 0.5rem; flex-wrap: wrap; align-items: center;">
+                ${(() => {
+                    const progress = getVocabProgress(vocab.id);
+                    return (progress.correct > 0 || progress.incorrect > 0) ? `
+                        <span style="font-size: 0.75rem; color: var(--text-muted);">
+                            ✓${progress.correct} ✗${progress.incorrect}
+                        </span>
+                    ` : '';
+                })()}
+                <button class="btn-audio" onclick="playPronunciation('${vocab.v1}')" title="Play pronunciation" style="background: rgba(99, 102, 241, 0.2); border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--primary-color); font-size: 0.9rem;">🔊</button>
+                <button class="btn-favorite" onclick="toggleFavoriteVocab(${vocab.id})" title="${isFavorite(vocab.id) ? 'Remove from' : 'Add to'} favorites" style="background: ${isFavorite(vocab.id) ? 'rgba(236, 72, 153, 0.2)' : 'rgba(255, 255, 255, 0.05)'}; border: none; border-radius: 50%; width: 32px; height: 32px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: ${isFavorite(vocab.id) ? '#ec4899' : 'var(--text-secondary)'}; font-size: 0.9rem;">
+                    ${isFavorite(vocab.id) ? '❤️' : '🤍'}
+                </button>
+            </div>
             <div class="action-buttons">
                 <button class="btn btn-quiz" onclick="startQuiz(${vocab.id})">Latihan Soal</button>
                 <button class="btn btn-example" onclick="showExamples(${vocab.id})">Lihat Contoh</button>
@@ -2588,10 +2968,15 @@ function selectOption(selectedIndex) {
     });
     
     const isCorrect = selectedIndex === correctIndex;
+    
+    // Update progress tracking
+    updateProgress(currentQuiz.id, isCorrect);
+    
     scoreDiv.style.display = 'block';
+    const progress = getVocabProgress(currentQuiz.id);
     scoreDiv.innerHTML = isCorrect 
-        ? '<span style="color: #22c55e;">✓ Benar! Bagus sekali!</span>'
-        : '<span style="color: #ef4444;">✗ Salah. Jawaban yang benar adalah: ' + currentQuiz.quiz.options[correctIndex] + '</span>';
+        ? `<span style="color: #22c55e;">✓ Benar! Bagus sekali!</span><br><small style="color: var(--text-muted);">Progress: ${progress.correct} benar, ${progress.incorrect} salah</small>`
+        : `<span style="color: #ef4444;">✗ Salah. Jawaban yang benar adalah: ${currentQuiz.quiz.options[correctIndex]}</span><br><small style="color: var(--text-muted);">Progress: ${progress.correct} benar, ${progress.incorrect} salah</small>`;
     
     // Show example sentence
     setTimeout(() => {
@@ -2760,3 +3145,4 @@ function toggleWordBankView() {
         filterAndSearch(document.getElementById('searchInput').value);
     }
 }
+
