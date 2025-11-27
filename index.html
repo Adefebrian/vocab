@@ -14,8 +14,13 @@
     </div>
     <div class="container">
         <header class="glass-card">
-            <h1>📚 Vocab Learning</h1>
-            <p>Belajar Kosakata Bahasa Inggris dengan Mudah</p>
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+                <div>
+                    <h1>📚 Vocab Learning</h1>
+                    <p>Belajar Kosakata Bahasa Inggris dengan Mudah</p>
+                </div>
+                <button id="wordBankBtn" class="btn-api" onclick="toggleWordBankView()" style="font-size: 0.9rem; padding: 0.8rem 1.5rem;">📚 Word Bank</button>
+            </div>
         </header>
 
         <div class="search-section glass-card">
@@ -194,7 +199,22 @@
                 <!-- Pagination controls will be inserted here -->
             </div>
         </div>
+
+        <!-- Word Bank Section -->
+        <div class="main-content" id="wordBankSection" style="display: none;">
+            <div class="vocab-stats glass-card" id="wordBankStats" style="margin-bottom: 1rem;">
+                <span id="wordBankStatsText">Word Bank: 0 vocabulary</span>
+            </div>
+            <div class="vocab-list" id="wordBankList">
+                <!-- Word Bank cards will be inserted here -->
+            </div>
+        </div>
     </div>
+
+    <!-- Footer -->
+    <footer style="text-align: center; padding: 2rem; color: var(--text-muted); margin-top: 2rem;">
+        <p style="font-size: 0.9rem;">Created by <a href="https://instagram.com/adefebrianpro" target="_blank" style="color: var(--primary-color); text-decoration: none;">Brian</a></p>
+    </footer>
 
     <!-- Overlay untuk popup -->
     <div class="overlay" id="overlay" onclick="closeQuiz()" style="display: none;"></div>
@@ -211,4 +231,3 @@
     <script src="script.js"></script>
 </body>
 </html>
-
