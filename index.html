@@ -19,14 +19,28 @@
                     <h1>📚 Vocab Learning</h1>
                     <p>Belajar Kosakata Bahasa Inggris dengan Mudah</p>
                 </div>
-                <button id="wordBankBtn" class="btn-api" onclick="toggleWordBankView()" style="font-size: 0.9rem; padding: 0.8rem 1.5rem;">📚 Word Bank</button>
+                <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
+                    <button id="wordBankBtn" class="btn-api" onclick="toggleWordBankView()" style="font-size: 0.9rem; padding: 0.8rem 1.5rem;">📚 Word Bank</button>
+                    <button id="themeToggle" class="btn-api" onclick="toggleTheme()" style="font-size: 0.9rem; padding: 0.8rem 1.5rem;">🌓 Theme</button>
+                    <div class="dropdown-container" style="position: relative;">
+                        <button class="btn-api" id="exportMenuBtn" style="font-size: 0.9rem; padding: 0.8rem 1.5rem;">📥 Export</button>
+                        <div class="dropdown-menu" id="exportMenu" style="right: 0; left: auto;">
+                            <button class="dropdown-item" onclick="exportWordBank('json')">Export as JSON</button>
+                            <button class="dropdown-item" onclick="exportWordBank('csv')">Export as CSV</button>
+                        </div>
+                    </div>
+                    <label class="btn-api" style="font-size: 0.9rem; padding: 0.8rem 1.5rem; cursor: pointer; margin: 0;">
+                        📤 Import
+                        <input type="file" accept=".json,.csv" onchange="handleImport(event)" style="display: none;">
+                    </label>
+                </div>
             </div>
         </header>
 
         <div class="search-section glass-card">
             <div style="display: flex; gap: 0.5rem; margin-bottom: 1rem;">
                 <input type="text" id="searchInput" placeholder="Cari kata kerja..." class="search-input" style="flex: 1;">
-                <button id="searchApiBtn" class="btn-api">🔍 Cari dari API</button>
+                <button id="searchApiBtn" class="btn-api">🔍 Cari Vocab</button>
             </div>
             <div id="loadingIndicator" class="loading-indicator" style="display: none;">
                 <div class="spinner"></div>
@@ -231,3 +245,4 @@
     <script src="script.js"></script>
 </body>
 </html>
+
