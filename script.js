@@ -1,3 +1,199 @@
+// AI API Configuration
+let AI_CONFIG = {
+    huggingFaceAPI: 'https://api-inference.huggingface.co/models',
+    geminiAPI: null, // User can set their own API key
+    useAI: true,
+    preferredProvider: 'huggingface' // 'huggingface' or 'gemini'
+};
+
+// Load AI config from localStorage
+function loadAIConfig() {
+    const saved = localStorage.getItem('aiConfig');
+    if (saved) {
+        try {
+            AI_CONFIG = { ...AI_CONFIG, ...JSON.parse(saved) };
+        } catch (e) {
+            console.error('Error loading AI config:', e);
+        }
+    }
+}
+
+// Save AI config to localStorage
+function saveAIConfig() {
+    localStorage.setItem('aiConfig', JSON.stringify(AI_CONFIG));
+}
+
+// Initialize AI config on load
+loadAIConfig();
+
+// AI Helper Functions
+async function callHuggingFaceAPI(model, inputs) {
+    try {
+        const response = await fetch(`${AI_CONFIG.huggingFaceAPI}/${model}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ inputs })
+        });
+        
+        if (!response.ok) {
+            throw new Error(`API Error: ${response.status}`);
+        }
+        
+        const data = await response.json();
+        return data;
+    } catch (error) {
+        console.error('Hugging Face API Error:', error);
+        throw error;
+    }
+}
+
+async function callGeminiAPI(prompt) {
+    if (!AI_CONFIG.geminiAPI) {
+        throw new Error('Gemini API key not configured');
+    }
+    
+    try {
+        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-pro:generateContent?key=${AI_CONFIG.geminiAPI}`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                contents: [{
+                    parts: [{ text: prompt }]
+                }]
+            })
+        });
+        
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => ({}));
+            throw new Error(`API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+        }
+        
+        const data = await response.json();
+        if (data.candidates && data.candidates[0] && data.candidates[0].content && data.candidates[0].content.parts && data.candidates[0].content.parts[0]) {
+            return data.candidates[0].content.parts[0].text;
+        }
+        throw new Error('Invalid response format from Gemini API');
+    } catch (error) {
+        console.error('Gemini API Error:', error);
+        throw error;
+    }
+}
+
+// AI-Powered Categorization
+async function categorizeWithAI(verb, meaning) {
+    const categories = ['sehari-hari', 'perasaan', 'keluarga', 'teman', 'bisnis', 'marketing', 'keuangan', 'hr', 'sales', 'akademik', 'sains', 'matematika', 'sejarah', 'literatur', 'teknologi', 'programming', 'ai', 'cybersecurity', 'makanan', 'fashion', 'kecantikan', 'hobi', 'musik', 'film', 'kesehatan', 'olahraga', 'fitness', 'medis', 'perjalanan', 'hotel', 'transportasi', 'slang', 'formal', 'hukum', 'politik', 'lingkungan'];
+    
+    if (!AI_CONFIG.useAI) {
+        return determineCategoryHeuristic(verb);
+    }
+    
+    try {
+        const prompt = `Categorize the English verb "${verb}" (meaning: "${meaning}") into ONE of these categories: ${categories.join(', ')}. Return ONLY the category name, nothing else.`;
+        
+        if (AI_CONFIG.preferredProvider === 'gemini' && AI_CONFIG.geminiAPI) {
+            const result = await callGeminiAPI(prompt);
+            const category = result.trim().toLowerCase();
+            if (categories.includes(category)) {
+                return category;
+            }
+        }
+        
+        // Fallback to Hugging Face or heuristic
+        return determineCategoryHeuristic(verb);
+    } catch (error) {
+        console.warn('AI categorization failed, using heuristic:', error);
+        return determineCategoryHeuristic(verb);
+    }
+}
+
+// Improved heuristic categorization
+function determineCategoryHeuristic(verb) {
+    const verbLower = verb.toLowerCase();
+    const categoryKeywords = {
+        'sehari-hari': ['go', 'come', 'get', 'make', 'do', 'say', 'see', 'know', 'think', 'take', 'use', 'find', 'give', 'tell', 'work', 'call', 'try', 'ask', 'need', 'want', 'feel', 'become', 'leave', 'put', 'keep', 'let', 'begin', 'seem', 'help', 'show', 'hear', 'play', 'run', 'move', 'like', 'live', 'believe', 'bring', 'happen', 'write', 'sit', 'stand', 'lose', 'pay', 'meet', 'include', 'continue', 'set', 'learn', 'change', 'lead', 'understand', 'watch', 'follow', 'stop', 'create', 'speak', 'read', 'spend', 'grow', 'open', 'walk', 'win', 'offer', 'remember', 'love', 'consider', 'appear', 'buy', 'wait', 'serve', 'die', 'send', 'build', 'stay', 'fall', 'cut', 'reach', 'kill', 'raise', 'pass', 'sell', 'decide', 'return', 'explain', 'develop', 'carry', 'break', 'receive', 'agree', 'support', 'hit', 'produce', 'eat', 'cover', 'catch', 'draw', 'choose', 'clean', 'wash', 'cook', 'drive', 'fly', 'sing', 'dance', 'laugh', 'smile', 'cry', 'sleep', 'wake', 'dream', 'hope', 'wish', 'pray', 'thank', 'greet', 'welcome', 'invite', 'visit', 'travel', 'arrive', 'depart', 'pack', 'unpack', 'wear', 'dress', 'undress', 'shower', 'bathe', 'brush', 'comb', 'shave', 'trim', 'paint', 'sketch', 'type', 'print', 'copy', 'paste', 'delete', 'save', 'load', 'upload', 'download', 'share', 'reply', 'forward', 'text', 'message', 'chat', 'whisper', 'shout', 'scream', 'yell', 'whistle', 'hum', 'jump', 'hop', 'skip', 'jog', 'sprint', 'race', 'compete', 'tie', 'score', 'practice', 'train', 'exercise', 'stretch', 'bend', 'lift', 'push', 'pull', 'drag', 'drop', 'throw', 'kick', 'punch', 'slap', 'pat', 'touch', 'hold', 'grab', 'grasp', 'release', 'place', 'lay', 'lie', 'kneel', 'crouch', 'squat', 'lean', 'extend', 'lower', 'trip', 'slip', 'slide', 'roll', 'turn', 'spin', 'rotate', 'twist', 'fold', 'unfold', 'close', 'shut', 'lock', 'unlock', 'enter', 'exit', 'journey', 'tour', 'explore', 'discover', 'search', 'look', 'observe', 'notice', 'spot', 'recognize', 'identify', 'forget', 'recall', 'remind', 'ponder', 'wonder', 'question', 'answer', 'respond', 'inform', 'announce', 'declare', 'state', 'claim', 'mention', 'converse', 'express', 'reveal', 'hide', 'conceal', 'display', 'demonstrate', 'exhibit', 'perform', 'act', 'pretend', 'imagine', 'desire', 'require', 'demand', 'request', 'beg', 'plead', 'expect', 'anticipate', 'remain', 'maintain', 'preserve', 'store', 'retain', 'possess', 'own', 'obtain', 'acquire', 'gain', 'earn', 'achieve', 'accomplish', 'complete', 'finish', 'end', 'cease', 'quit', 'surrender', 'yield', 'submit', 'reject', 'refuse', 'deny', 'decline', 'disagree', 'disapprove', 'dislike', 'hate', 'adore', 'despise', 'prefer', 'select', 'pick', 'determine', 'resolve', 'solve', 'repair', 'mend', 'damage', 'destroy', 'ruin', 'spoil', 'waste', 'spare', 'defend', 'guard', 'shield', 'shelter', 'uncover', 'expose', 'describe', 'define', 'clarify', 'illustrate', 'study', 'erase', 'remove', 'add', 'insert', 'exclude', 'omit', 'skip', 'miss', 'seize', 'collect', 'gather', 'accumulate', 'amass', 'hoard', 'sustain', 'assist', 'aid', 'benefit', 'favor', 'elect', 'vote', 'heal', 'cure', 'treat', 'care', 'nurse', 'tend', 'supervise', 'control', 'direct', 'command', 'order', 'instruct', 'educate', 'coach', 'mentor', 'advise', 'counsel', 'suggest', 'recommend', 'propose', 'supply', 'donate', 'contribute', 'distribute', 'divide', 'split', 'unite', 'connect', 'link', 'attach', 'detach', 'slice', 'chop', 'dice', 'mince', 'grind', 'crush', 'smash', 'shatter', 'crack', 'fracture', 'rip', 'yank', 'tug', 'shove', 'thrust', 'toss', 'hurl', 'fling', 'pitch', 'cast', 'launch', 'fire', 'shoot', 'aim', 'target', 'miss', 'strike', 'beat', 'tap', 'knock', 'bang', 'collide', 'crash', 'bump', 'contact', 'encounter', 'face', 'confront', 'approach', 'near', 'locate', 'glance', 'glimpse', 'stare', 'gaze', 'peer', 'peek', 'peep', 'monitor', 'oversee'],
+        'perasaan': ['feel', 'love', 'hate', 'worry', 'enjoy', 'like', 'dislike', 'appreciate', 'admire', 'respect', 'honor', 'cherish', 'treasure', 'value', 'prize', 'esteem', 'regard', 'consider', 'think', 'believe', 'trust', 'doubt', 'suspect', 'wonder', 'question', 'fear', 'dread', 'panic', 'anxious', 'nervous', 'excited', 'thrilled', 'delighted', 'pleased', 'satisfied', 'content', 'happy', 'joyful', 'glad', 'cheerful', 'merry', 'jolly', 'ecstatic', 'elated', 'euphoric', 'blissful', 'serene', 'calm', 'peaceful', 'tranquil', 'relaxed', 'comfortable', 'cozy', 'snug', 'warm', 'friendly', 'kind', 'gentle', 'tender', 'soft', 'sweet', 'nice', 'pleasant', 'agreeable', 'enjoyable', 'pleasurable', 'delightful', 'wonderful', 'marvelous', 'fantastic', 'fabulous', 'amazing', 'awesome', 'incredible', 'unbelievable', 'extraordinary', 'remarkable', 'outstanding', 'exceptional', 'superb', 'excellent', 'perfect', 'ideal', 'flawless', 'impeccable', 'faultless', 'spotless', 'pristine', 'pure', 'clean', 'fresh', 'new', 'novel', 'original', 'unique', 'special', 'particular', 'specific', 'individual', 'personal', 'private', 'intimate', 'close', 'dear', 'beloved', 'cherished', 'treasured', 'valued', 'prized', 'esteemed', 'respected', 'admired', 'appreciated', 'loved', 'adored', 'worshipped', 'idolized', 'revered', 'venerated', 'honored', 'praised', 'complimented', 'flattered', 'charmed', 'captivated', 'enchanted', 'bewitched', 'mesmerized', 'hypnotized', 'fascinated', 'intrigued', 'interested', 'curious', 'inquisitive', 'nosy', 'prying', 'snooping', 'investigating', 'exploring', 'examining', 'studying', 'analyzing', 'scrutinizing', 'inspecting', 'reviewing', 'checking', 'verifying', 'validating', 'confirming', 'affirming', 'asserting', 'declaring', 'stating', 'claiming', 'maintaining', 'insisting', 'arguing', 'debating', 'discussing', 'talking', 'speaking', 'communicating', 'expressing', 'conveying', 'transmitting', 'sending', 'delivering', 'presenting', 'showing', 'displaying', 'demonstrating', 'illustrating', 'exemplifying', 'representing', 'symbolizing', 'signifying', 'meaning', 'denoting', 'indicating', 'suggesting', 'implying', 'hinting', 'insinuating', 'alluding', 'referring', 'mentioning', 'citing', 'quoting', 'paraphrasing', 'summarizing', 'condensing', 'compressing', 'abbreviating', 'shortening', 'reducing', 'minimizing', 'decreasing', 'lowering', 'diminishing', 'lessening', 'weakening', 'fading', 'waning', 'declining', 'deteriorating', 'degenerating', 'decaying', 'rotting', 'spoiling', 'ruining', 'destroying', 'damaging', 'harming', 'hurting', 'injuring', 'wounding', 'traumatizing', 'devastating', 'crushing', 'shattering', 'breaking', 'splitting', 'cracking', 'fracturing', 'shattering', 'smashing', 'crushing', 'pulverizing', 'grinding', 'pounding', 'beating', 'hitting', 'striking', 'slapping', 'punching', 'kicking', 'pushing', 'pulling', 'dragging', 'tugging', 'yanking', 'jerking', 'twisting', 'turning', 'rotating', 'spinning', 'revolving', 'orbiting', 'circling', 'encircling', 'surrounding', 'encompassing', 'including', 'containing', 'holding', 'grasping', 'gripping', 'clutching', 'clasping', 'embracing', 'hugging', 'cuddling', 'snuggling', 'nestling', 'nuzzling', 'caressing', 'stroking', 'petting', 'patting', 'tapping', 'touching', 'feeling', 'sensing', 'perceiving', 'detecting', 'noticing', 'observing', 'watching', 'viewing', 'seeing', 'looking', 'gazing', 'staring', 'glaring', 'peering', 'peeking', 'glancing', 'glimpsing', 'spotting', 'noticing', 'discovering', 'finding', 'locating', 'identifying', 'recognizing', 'acknowledging', 'admitting', 'confessing', 'revealing', 'disclosing', 'exposing', 'uncovering', 'unveiling', 'unmasking', 'unwrapping', 'unpacking', 'opening', 'unfolding', 'expanding', 'spreading', 'stretching', 'extending', 'elongating', 'lengthening', 'prolonging', 'continuing', 'persisting', 'persevering', 'enduring', 'sustaining', 'maintaining', 'preserving', 'keeping', 'retaining', 'holding', 'grasping', 'gripping', 'clutching', 'clasping', 'embracing', 'hugging', 'cuddling', 'snuggling', 'nestling', 'nuzzling', 'caressing', 'stroking', 'petting', 'patting', 'tapping', 'touching', 'feeling', 'sensing', 'perceiving', 'detecting', 'noticing', 'observing', 'watching', 'viewing', 'seeing', 'looking', 'gazing', 'staring', 'glaring', 'peering', 'peeking', 'glancing', 'glimpsing', 'spotting', 'noticing', 'discovering', 'finding', 'locating', 'identifying', 'recognizing', 'acknowledging', 'admitting', 'confessing', 'revealing', 'disclosing', 'exposing', 'uncovering', 'unveiling', 'unmasking', 'unwrapping', 'unpacking', 'opening', 'unfolding', 'expanding', 'spreading', 'stretching', 'extending', 'elongating', 'lengthening', 'prolonging', 'continuing', 'persisting', 'persevering', 'enduring', 'sustaining', 'maintaining', 'preserving', 'keeping', 'retaining'],
+        'bisnis': ['manage', 'invest', 'negotiate', 'hire', 'sell', 'buy', 'meet', 'present', 'analyze', 'plan', 'organize', 'execute', 'implement', 'evaluate', 'review', 'approve', 'reject', 'propose', 'discuss', 'decide', 'allocate', 'budget', 'forecast', 'report', 'submit', 'process', 'handle', 'coordinate', 'supervise', 'direct', 'lead', 'guide', 'train', 'develop', 'improve', 'optimize', 'maximize', 'minimize', 'reduce', 'increase', 'expand', 'contract', 'merge', 'acquire', 'divest', 'liquidate', 'restructure', 'reorganize', 'outsource', 'insource', 'delegate', 'authorize', 'validate', 'verify', 'audit', 'comply', 'regulate', 'govern', 'control', 'monitor', 'track', 'measure', 'assess', 'evaluate', 'rate', 'rank', 'compare', 'contrast', 'benchmark', 'standardize', 'customize', 'personalize', 'tailor', 'adapt', 'adjust', 'modify', 'refine', 'enhance', 'upgrade', 'update', 'maintain', 'sustain', 'preserve', 'protect', 'secure', 'safeguard', 'insure', 'guarantee', 'warrant', 'promise', 'commit', 'deliver', 'fulfill', 'satisfy', 'exceed', 'surpass', 'outperform', 'outdo', 'outshine', 'excel', 'succeed', 'achieve', 'accomplish', 'attain', 'reach', 'obtain', 'gain', 'earn', 'profit', 'benefit', 'advantage', 'leverage', 'utilize', 'exploit', 'capitalize', 'monetize', 'commercialize', 'market', 'promote', 'advertise', 'publicize', 'brand', 'position', 'differentiate', 'distinguish', 'identify', 'recognize', 'acknowledge', 'appreciate', 'value', 'price', 'cost', 'charge', 'bill', 'invoice', 'quote', 'estimate', 'calculate', 'compute', 'figure', 'determine', 'establish', 'found', 'create', 'build', 'construct', 'develop', 'design', 'engineer', 'manufacture', 'produce', 'make', 'fabricate', 'assemble', 'install', 'setup', 'configure'],
+        'teknologi': ['download', 'upload', 'code', 'program', 'stream', 'click', 'use', 'install', 'update', 'upgrade', 'configure', 'setup', 'connect', 'disconnect', 'link', 'unlink', 'attach', 'detach', 'embed', 'extract', 'compress', 'decompress', 'encrypt', 'decrypt', 'encode', 'decode', 'parse', 'format', 'convert', 'transform', 'translate', 'compile', 'execute', 'run', 'launch', 'start', 'stop', 'pause', 'resume', 'restart', 'reboot', 'shutdown', 'boot', 'load', 'unload', 'import', 'export', 'save', 'delete', 'remove', 'add', 'insert', 'append', 'prepend', 'modify', 'edit', 'update', 'change', 'alter', 'adjust', 'customize', 'personalize', 'tailor', 'adapt', 'optimize', 'enhance', 'improve', 'refine', 'polish', 'perfect', 'complete', 'finish', 'finalize', 'publish', 'deploy', 'release', 'launch', 'rollout', 'implement', 'integrate', 'merge', 'combine', 'split', 'separate', 'divide', 'partition', 'segment', 'categorize', 'classify', 'tag', 'label', 'mark', 'flag', 'bookmark', 'favorite', 'like', 'share', 'comment', 'reply', 'forward', 'redirect', 'route', 'navigate', 'browse', 'search', 'find', 'locate', 'discover', 'explore', 'investigate', 'examine', 'inspect', 'review', 'audit', 'monitor', 'track', 'log', 'record', 'document', 'archive', 'backup', 'restore', 'recover', 'retrieve', 'fetch', 'pull', 'push', 'sync', 'synchronize', 'async', 'asynchronize', 'queue', 'stack', 'buffer', 'cache', 'store', 'save', 'load', 'unload', 'import', 'export', 'transfer', 'transmit', 'receive', 'send', 'deliver', 'dispatch', 'distribute', 'allocate', 'assign', 'delegate', 'authorize', 'authenticate', 'verify', 'validate', 'confirm', 'approve', 'reject', 'deny', 'block', 'allow', 'permit', 'grant', 'revoke', 'cancel', 'terminate', 'end', 'finish', 'complete', 'close', 'open', 'start', 'begin', 'initiate', 'commence', 'launch', 'activate', 'enable', 'disable', 'deactivate', 'suspend', 'resume', 'continue', 'proceed', 'advance', 'progress', 'evolve', 'develop', 'grow', 'expand', 'scale', 'upgrade', 'downgrade', 'update', 'patch', 'fix', 'repair', 'maintain', 'sustain', 'preserve', 'protect', 'secure', 'safeguard', 'defend', 'shield', 'guard', 'watch', 'monitor', 'observe', 'supervise', 'oversee', 'manage', 'control', 'regulate', 'govern', 'direct', 'guide', 'lead', 'steer', 'navigate', 'pilot', 'drive', 'operate', 'run', 'execute', 'perform', 'carry', 'out', 'implement', 'apply', 'utilize', 'use', 'employ', 'leverage', 'exploit', 'capitalize', 'maximize', 'optimize', 'enhance', 'improve', 'refine', 'polish', 'perfect', 'complete', 'finish', 'finalize', 'publish', 'deploy', 'release', 'launch', 'rollout'],
+        'makanan': ['cook', 'taste', 'order', 'drink', 'eat', 'consume', 'devour', 'gobble', 'gulp', 'swallow', 'chew', 'bite', 'nibble', 'peck', 'sample', 'try', 'test', 'savor', 'relish', 'enjoy', 'appreciate', 'delight', 'revel', 'indulge', 'treat', 'pamper', 'spoil', 'coddle', 'baby', 'mollycoddle', 'cosset', 'pamper', 'indulge', 'gratify', 'satisfy', 'please', 'delight', 'charm', 'captivate', 'enchant', 'bewitch', 'mesmerize', 'hypnotize', 'fascinate', 'intrigue', 'interest', 'attract', 'draw', 'pull', 'lure', 'entice', 'tempt', 'seduce', 'allure'],
+        'olahraga': ['play', 'run', 'swim', 'jump', 'win', 'lose', 'compete', 'participate', 'join', 'enter', 'register', 'sign', 'up', 'enroll', 'enlist', 'recruit', 'draft', 'select', 'choose', 'pick', 'elect', 'vote', 'decide', 'determine', 'resolve', 'settle', 'conclude', 'finish', 'complete', 'end', 'terminate', 'stop', 'cease', 'halt', 'pause', 'suspend', 'interrupt', 'disrupt', 'disturb', 'bother', 'annoy', 'irritate', 'exasperate', 'frustrate', 'aggravate', 'provoke', 'incite', 'instigate', 'stir', 'up', 'rouse', 'arouse', 'awaken', 'wake', 'up', 'revive', 'revitalize', 'rejuvenate', 'refresh', 'renew', 'restore', 'restore', 'repair', 'fix', 'mend', 'heal', 'cure', 'treat', 'nurse', 'tend', 'care', 'for', 'look', 'after', 'attend', 'to', 'see', 'to', 'take', 'care', 'of', 'mind', 'watch', 'over', 'guard', 'protect', 'defend', 'shield', 'safeguard', 'secure', 'insure', 'guarantee', 'warrant', 'promise', 'pledge', 'vow', 'swear', 'commit', 'dedicate', 'devote', 'consecrate', 'sanctify', 'bless', 'anoint', 'ordain', 'appoint', 'designate', 'assign', 'allocate', 'allot', 'distribute', 'dispense', 'dispense', 'administer', 'apply', 'use', 'utilize', 'employ', 'exercise', 'practice', 'drill', 'train', 'coach', 'instruct', 'teach', 'educate', 'school', 'tutor', 'mentor', 'guide', 'direct', 'lead', 'conduct', 'manage', 'supervise', 'oversee', 'control', 'regulate', 'govern', 'rule', 'reign', 'dominate', 'command', 'order', 'dictate', 'prescribe', 'ordain', 'decree', 'enact', 'establish', 'institute', 'found', 'create', 'build', 'construct', 'develop', 'design', 'plan', 'organize', 'structure', 'arrange', 'order', 'sequence', 'categorize', 'classify', 'group', 'sort', 'rank', 'prioritize', 'hierarchy', 'taxonomy', 'systematize', 'methodize', 'standardize', 'normalize', 'regularize', 'formalize', 'institutionalize'],
+        'kesehatan': ['exercise', 'sleep', 'rest', 'heal', 'cure', 'treat', 'diagnose', 'examine', 'inspect', 'check', 'test', 'screen', 'scan', 'monitor', 'track', 'log', 'record', 'document', 'archive', 'backup', 'restore', 'recover', 'retrieve', 'fetch', 'pull', 'push', 'sync', 'synchronize', 'async', 'asynchronize', 'queue', 'stack', 'buffer', 'cache', 'store', 'save', 'load', 'unload', 'import', 'export', 'transfer', 'transmit', 'receive', 'send', 'deliver', 'dispatch', 'distribute', 'allocate', 'assign', 'delegate', 'authorize', 'authenticate', 'verify', 'validate', 'confirm', 'approve', 'reject', 'deny', 'block', 'allow', 'permit', 'grant', 'revoke', 'cancel', 'terminate', 'end', 'finish', 'complete', 'close', 'open', 'start', 'begin', 'initiate', 'commence', 'launch', 'activate', 'enable', 'disable', 'deactivate', 'suspend', 'resume', 'continue', 'proceed', 'advance', 'progress', 'evolve', 'develop', 'grow', 'expand', 'scale', 'upgrade', 'downgrade', 'update', 'patch', 'fix', 'repair', 'maintain', 'sustain', 'preserve', 'protect', 'secure', 'safeguard', 'defend', 'shield', 'guard', 'watch', 'monitor', 'observe', 'supervise', 'oversee', 'manage', 'control', 'regulate', 'govern', 'direct', 'guide', 'lead', 'steer', 'navigate', 'pilot', 'drive', 'operate', 'run', 'execute', 'perform', 'carry', 'out', 'implement', 'apply', 'utilize', 'use', 'employ', 'leverage', 'exploit', 'capitalize', 'maximize', 'optimize', 'enhance', 'improve', 'refine', 'polish', 'perfect', 'complete', 'finish', 'finalize', 'publish', 'deploy', 'release', 'launch', 'rollout'],
+        'perjalanan': ['travel', 'visit', 'book', 'pack', 'unpack', 'depart', 'arrive', 'leave', 'return', 'journey', 'voyage', 'cruise', 'sail', 'fly', 'drive', 'ride', 'walk', 'hike', 'trek', 'explore', 'discover', 'adventure', 'wander', 'roam', 'roam', 'stroll', 'saunter', 'amble', 'meander', 'ramble', 'drift', 'drift', 'float', 'glide', 'soar', 'swoop', 'dive', 'plunge', 'dip', 'submerge', 'emerge', 'surface', 'rise', 'ascend', 'climb', 'scale', 'mount', 'conquer', 'overcome', 'surmount', 'transcend', 'exceed', 'surpass', 'outdo', 'outperform', 'outshine', 'excel', 'succeed', 'achieve', 'accomplish', 'attain', 'reach', 'obtain', 'gain', 'earn', 'win', 'secure', 'acquire', 'get', 'receive', 'collect', 'gather', 'accumulate', 'amass', 'hoard', 'stockpile', 'store', 'save', 'preserve', 'keep', 'retain', 'maintain', 'sustain', 'uphold', 'support', 'back', 'endorse', 'approve', 'sanction', 'authorize', 'permit', 'allow', 'enable', 'facilitate', 'assist', 'help', 'aid', 'support', 'back', 'endorse', 'approve', 'sanction', 'authorize', 'permit', 'allow', 'enable', 'facilitate', 'assist', 'help', 'aid', 'support', 'back', 'endorse', 'approve', 'sanction', 'authorize', 'permit', 'allow', 'enable', 'facilitate', 'assist', 'help', 'aid'],
+        'akademik': ['study', 'research', 'analyze', 'write', 'read', 'examine', 'investigate', 'explore', 'discover', 'identify', 'define', 'explain', 'describe', 'discuss', 'argue', 'debate', 'critique', 'evaluate', 'assess', 'compare', 'contrast', 'synthesize', 'summarize', 'paraphrase', 'cite', 'reference', 'quote', 'document', 'record', 'note', 'observe', 'measure', 'calculate', 'compute', 'derive', 'prove', 'demonstrate', 'illustrate', 'exemplify', 'clarify', 'elucidate', 'interpret', 'translate', 'transform', 'convert', 'adapt', 'modify', 'revise', 'edit', 'proofread', 'review', 'revise', 'rewrite', 'redraft', 'rework', 'refine', 'polish', 'perfect', 'complete', 'finish', 'conclude', 'summarize', 'abstract', 'extract', 'distill', 'condense', 'compress', 'expand', 'elaborate', 'develop', 'build', 'construct', 'create', 'formulate', 'devise', 'design', 'plan', 'organize', 'structure', 'arrange', 'order', 'sequence', 'categorize', 'classify', 'group', 'sort', 'rank', 'prioritize', 'hierarchy', 'taxonomy', 'systematize', 'methodize', 'standardize', 'normalize', 'regularize', 'formalize', 'institutionalize', 'establish', 'found', 'create', 'build', 'construct', 'develop', 'design', 'plan', 'organize', 'structure', 'arrange', 'order', 'sequence', 'categorize', 'classify', 'group', 'sort', 'rank', 'prioritize', 'hierarchy', 'taxonomy', 'systematize', 'methodize', 'standardize', 'normalize', 'regularize', 'formalize', 'institutionalize']
+    };
+    
+    for (const [category, keywords] of Object.entries(categoryKeywords)) {
+        if (keywords.some(keyword => verbLower.includes(keyword) || verbLower === keyword)) {
+            return category;
+        }
+    }
+    
+    return 'sehari-hari'; // Default
+}
+
+// AI-Powered Meaning/Translation
+async function getMeaningWithAI(verb) {
+    if (!AI_CONFIG.useAI) {
+        return await translateToIndonesian(verb);
+    }
+    
+    try {
+        const prompt = `Translate the English verb "${verb}" to Indonesian. Provide ONLY the Indonesian translation, nothing else. Make it concise and accurate.`;
+        
+        if (AI_CONFIG.preferredProvider === 'gemini' && AI_CONFIG.geminiAPI) {
+            const result = await callGeminiAPI(prompt);
+            return result.trim();
+        }
+        
+        // Fallback to translation API
+        return await translateToIndonesian(verb);
+    } catch (error) {
+        console.warn('AI translation failed, using fallback:', error);
+        return await translateToIndonesian(verb);
+    }
+}
+
+// AI-Powered Example Sentences
+async function generateExamplesWithAI(verb, verbForms, meaning) {
+    if (!AI_CONFIG.useAI) {
+        return generateVariedExamples(verb, verbForms, meaning);
+    }
+    
+    try {
+        const prompt = `Generate 3 natural, varied example sentences in English using the verb "${verb}" (V1: ${verbForms.v1}, V2: ${verbForms.v2}, V3: ${verbForms.v3}). Use different tenses (present, past, perfect) and make them sound like everyday conversation. Format: One sentence per line, no numbering.`;
+        
+        if (AI_CONFIG.preferredProvider === 'gemini' && AI_CONFIG.geminiAPI) {
+            const result = await callGeminiAPI(prompt);
+            const sentences = result.split('\n').filter(s => s.trim()).slice(0, 3);
+            
+            const examples = [];
+            for (const sentence of sentences) {
+                const cleanSentence = sentence.replace(/^\d+\.\s*/, '').trim();
+                if (cleanSentence) {
+                    const translation = await translateToIndonesian(cleanSentence);
+                    examples.push({
+                        sentence: cleanSentence,
+                        translation: translation
+                    });
+                }
+            }
+            
+            if (examples.length > 0) {
+                return examples;
+            }
+        }
+        
+        // Fallback to template-based generation
+        return generateVariedExamples(verb, verbForms, meaning);
+    } catch (error) {
+        console.warn('AI example generation failed, using templates:', error);
+        return generateVariedExamples(verb, verbForms, meaning);
+    }
+}
+
 // Vocabulary data dengan v1, v2, v3, arti Indonesia, contoh soal, dan contoh kalimat
 const vocabularyData = [
     {
@@ -1941,56 +2137,40 @@ async function fetchWordFromAPI(word) {
                 }
             }
             
-            // Translate definition
-            const translatedDefinition = await translateToIndonesian(definition || word);
-            
-            // Translate examples
-            const translatedExamples = [];
-            for (let i = 0; i < Math.min(examples.length, 3); i++) {
-                const translated = await translateToIndonesian(examples[i]);
-                translatedExamples.push({
-                    sentence: examples[i],
-                    translation: translated
-                });
-            }
-            
-            // Get verb forms
+            // Get verb forms first
             const verbForms = getVerbForms(word);
             
-            // Jika tidak ada contoh dari API, gunakan varied examples
-            if (translatedExamples.length === 0) {
-                const exampleTemplates = generateVariedExamples(word, verbForms, translatedDefinition);
-                for (const template of exampleTemplates) {
+            // Use AI for better meaning/translation
+            let translatedDefinition;
+            if (definition) {
+                translatedDefinition = await getMeaningWithAI(word);
+            } else {
+                translatedDefinition = await getMeaningWithAI(word);
+            }
+            
+            // Use AI for example sentences
+            let translatedExamples = [];
+            if (examples.length > 0) {
+                // Use examples from API but translate with AI
+                for (let i = 0; i < Math.min(examples.length, 3); i++) {
+                    const translated = await translateToIndonesian(examples[i]);
                     translatedExamples.push({
-                        sentence: template.en,
-                        translation: template.id
+                        sentence: examples[i],
+                        translation: translated
                     });
                 }
+            }
+            
+            // If no examples from API, use AI to generate
+            if (translatedExamples.length === 0) {
+                translatedExamples = await generateExamplesWithAI(word, verbForms, translatedDefinition);
             }
             
             // Generate varied quiz
             const quiz = generateVariedQuiz(word, verbForms);
             
-            // Determine category (simple heuristic)
-            let category = 'sehari-hari';
-            const wordLower = word.toLowerCase();
-            if (wordLower.includes('manage') || wordLower.includes('invest') || wordLower.includes('sell') || wordLower.includes('buy')) {
-                category = 'bisnis';
-            } else if (wordLower.includes('code') || wordLower.includes('download') || wordLower.includes('upload') || wordLower.includes('click')) {
-                category = 'teknologi';
-            } else if (wordLower.includes('study') || wordLower.includes('research') || wordLower.includes('analyze')) {
-                category = 'akademik';
-            } else if (wordLower.includes('cook') || wordLower.includes('eat') || wordLower.includes('drink') || wordLower.includes('taste')) {
-                category = 'makanan';
-            } else if (wordLower.includes('play') || wordLower.includes('run') || wordLower.includes('swim') || wordLower.includes('jump')) {
-                category = 'olahraga';
-            } else if (wordLower.includes('feel') || wordLower.includes('love') || wordLower.includes('hate') || wordLower.includes('worry')) {
-                category = 'perasaan';
-            } else if (wordLower.includes('travel') || wordLower.includes('visit') || wordLower.includes('book') || wordLower.includes('pack')) {
-                category = 'perjalanan';
-            } else if (wordLower.includes('sleep') || wordLower.includes('rest') || wordLower.includes('heal') || wordLower.includes('cure')) {
-                category = 'kesehatan';
-            }
+            // Use AI for intelligent categorization
+            const category = await categorizeWithAI(word, translatedDefinition);
             
             const level = determineLevel(word);
             
@@ -2078,12 +2258,16 @@ async function generateBulkVocabulary() {
             
             const verbForms = getVerbForms(verb);
             
-            // Use simple meaning (avoid too many API calls)
+            // Use AI for better meaning
             let meaning = verb; // Fallback
             try {
-                meaning = await translateToIndonesian(verb);
+                meaning = await getMeaningWithAI(verb);
             } catch (e) {
-                meaning = verb; // Use verb as fallback
+                try {
+                    meaning = await translateToIndonesian(verb);
+                } catch (e2) {
+                    meaning = verb; // Use verb as fallback
+                }
             }
             
             const level = determineLevel(verb);
@@ -2091,26 +2275,39 @@ async function generateBulkVocabulary() {
             // Calculate ID based on current total
             currentMaxId++;
             
-            // Generate varied examples
-            const exampleTemplates = generateVariedExamples(verb, verbForms, meaning);
-            const examples = [];
-            for (const template of exampleTemplates) {
-                try {
-                    const translated = await translateToIndonesian(template.en);
-                    examples.push({
-                        sentence: template.en,
-                        translation: translated || template.id
-                    });
-                } catch (e) {
-                    examples.push({
-                        sentence: template.en,
-                        translation: template.id
-                    });
+            // Use AI for better example sentences
+            let examples = [];
+            try {
+                examples = await generateExamplesWithAI(verb, verbForms, meaning);
+            } catch (e) {
+                // Fallback to template-based
+                const exampleTemplates = generateVariedExamples(verb, verbForms, meaning);
+                for (const template of exampleTemplates) {
+                    try {
+                        const translated = await translateToIndonesian(template.en);
+                        examples.push({
+                            sentence: template.en,
+                            translation: translated || template.id
+                        });
+                    } catch (e2) {
+                        examples.push({
+                            sentence: template.en,
+                            translation: template.id
+                        });
+                    }
                 }
             }
             
             // Generate varied quiz
             const quiz = generateVariedQuiz(verb, verbForms);
+            
+            // Use AI for intelligent categorization
+            let finalCategory = category;
+            try {
+                finalCategory = await categorizeWithAI(verb, meaning);
+            } catch (e) {
+                finalCategory = category; // Use original category
+            }
             
             generated.push({
                 id: currentMaxId,
@@ -2119,7 +2316,7 @@ async function generateBulkVocabulary() {
                 v3: verbForms.v3,
                 meaning: meaning,
                 type: verbForms.type,
-                category: category,
+                category: finalCategory,
                 level: level,
                 examples: examples,
                 quiz: quiz
@@ -2216,35 +2413,53 @@ async function generateCategoryVocabulary(category) {
         const verbForms = getVerbForms(verb);
         const level = determineLevel(verb);
         
+        // Use AI for better meaning
         let meaning = verb;
         try {
-            meaning = await translateToIndonesian(verb);
+            meaning = await getMeaningWithAI(verb);
         } catch (e) {
-            meaning = verb;
+            try {
+                meaning = await translateToIndonesian(verb);
+            } catch (e2) {
+                meaning = verb;
+            }
         }
         
         currentMaxId++;
         
-        // Generate varied examples
-        const exampleTemplates = generateVariedExamples(verb, verbForms, meaning);
-        const examples = [];
-        for (const template of exampleTemplates) {
-            try {
-                const translated = await translateToIndonesian(template.en);
-                examples.push({
-                    sentence: template.en,
-                    translation: translated || template.id
-                });
-            } catch (e) {
-                examples.push({
-                    sentence: template.en,
-                    translation: template.id
-                });
+        // Use AI for better example sentences
+        let examples = [];
+        try {
+            examples = await generateExamplesWithAI(verb, verbForms, meaning);
+        } catch (e) {
+            // Fallback to template-based
+            const exampleTemplates = generateVariedExamples(verb, verbForms, meaning);
+            for (const template of exampleTemplates) {
+                try {
+                    const translated = await translateToIndonesian(template.en);
+                    examples.push({
+                        sentence: template.en,
+                        translation: translated || template.id
+                    });
+                } catch (e2) {
+                    examples.push({
+                        sentence: template.en,
+                        translation: template.id
+                    });
+                }
             }
         }
         
         // Generate varied quiz
         const quiz = generateVariedQuiz(verb, verbForms);
+        
+        // Use AI for intelligent categorization
+        let finalCategory = category;
+        try {
+            finalCategory = await categorizeWithAI(verb, meaning);
+        } catch (e) {
+            finalCategory = category; // Use original category
+        }
         
         generated.push({
             id: currentMaxId,
@@ -2253,7 +2468,7 @@ async function generateCategoryVocabulary(category) {
             v3: verbForms.v3,
             meaning: meaning,
             type: verbForms.type,
-            category: category,
+            category: finalCategory,
             level: level,
             examples: examples,
             quiz: quiz
@@ -2379,8 +2594,110 @@ function toggleTheme() {
     showMessage(`Theme diubah ke ${newTheme} mode`, 'success');
 }
 
+// Improve vocabulary with AI
+async function improveVocabWithAI(vocabId) {
+    const vocab = vocabularyData.find(v => v.id === vocabId);
+    if (!vocab) {
+        showMessage('Vocabulary tidak ditemukan!', 'error');
+        return;
+    }
+    
+    if (!AI_CONFIG.useAI) {
+        showMessage('AI features tidak diaktifkan!', 'error');
+        return;
+    }
+    
+    showMessage('Memperbaiki vocabulary dengan AI...', 'success');
+    
+    try {
+        const verbForms = getVerbForms(vocab.v1);
+        
+        // Improve meaning
+        const improvedMeaning = await getMeaningWithAI(vocab.v1);
+        
+        // Improve examples
+        const improvedExamples = await generateExamplesWithAI(vocab.v1, verbForms, improvedMeaning);
+        
+        // Improve category
+        const improvedCategory = await categorizeWithAI(vocab.v1, improvedMeaning);
+        
+        // Update vocabulary
+        vocab.meaning = improvedMeaning;
+        vocab.examples = improvedExamples;
+        vocab.category = improvedCategory;
+        
+        // Save to storage
+        saveVocabularyToStorage();
+        
+        // Refresh display
+        filterAndSearch(document.getElementById('searchInput').value);
+        
+        showMessage('Vocabulary berhasil diperbaiki dengan AI!', 'success');
+    } catch (error) {
+        console.error('Error improving vocab with AI:', error);
+        showMessage('Error: ' + error.message, 'error');
+    }
+}
+
+// AI Configuration Functions
+function toggleAIConfig() {
+    const overlay = document.getElementById('aiConfigOverlay');
+    const section = document.getElementById('aiConfigSection');
+    
+    if (!overlay || !section) return;
+    
+    const isVisible = section.style.display !== 'none';
+    
+    if (isVisible) {
+        // Save config
+        saveAIConfig();
+        overlay.style.display = 'none';
+        section.style.display = 'none';
+        document.body.style.overflow = 'auto';
+    } else {
+        // Load current config to UI
+        document.getElementById('useAICheckbox').checked = AI_CONFIG.useAI;
+        document.getElementById('aiProviderSelect').value = AI_CONFIG.preferredProvider;
+        if (AI_CONFIG.geminiAPI) {
+            document.getElementById('geminiAPIKey').value = AI_CONFIG.geminiAPI;
+        }
+        changeAIProvider();
+        
+        overlay.style.display = 'block';
+        section.style.display = 'block';
+        document.body.style.overflow = 'hidden';
+    }
+}
+
+function toggleAIUsage() {
+    AI_CONFIG.useAI = document.getElementById('useAICheckbox').checked;
+    saveAIConfig();
+}
+
+function changeAIProvider() {
+    const provider = document.getElementById('aiProviderSelect').value;
+    AI_CONFIG.preferredProvider = provider;
+    
+    const geminiConfig = document.getElementById('geminiConfig');
+    if (provider === 'gemini') {
+        geminiConfig.style.display = 'block';
+        // Load saved API key if exists
+        if (AI_CONFIG.geminiAPI) {
+            document.getElementById('geminiAPIKey').value = AI_CONFIG.geminiAPI;
+        }
+    } else {
+        geminiConfig.style.display = 'none';
+    }
+    
+    saveAIConfig();
+}
+
+
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
+    // Load AI config first
+    loadAIConfig();
+    
     // Setup keyboard shortcuts
     setupKeyboardShortcuts();
     
@@ -2398,6 +2715,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
         document.addEventListener('click', function() {
             exportMenu.classList.remove('show');
+        });
+    }
+    
+    // Setup Gemini API key input
+    const geminiKeyInput = document.getElementById('geminiAPIKey');
+    if (geminiKeyInput) {
+        geminiKeyInput.addEventListener('blur', function() {
+            AI_CONFIG.geminiAPI = this.value.trim() || null;
+            saveAIConfig();
         });
     }
     
@@ -2732,6 +3058,7 @@ function renderVocabList(data = vocabularyData) {
             <div class="action-buttons">
                 <button class="btn btn-quiz" onclick="startQuiz(${vocab.id})">Latihan Soal</button>
                 <button class="btn btn-example" onclick="showExamples(${vocab.id})">Lihat Contoh</button>
+                ${AI_CONFIG.useAI ? `<button class="btn btn-example" onclick="improveVocabWithAI(${vocab.id})" title="Improve with AI" style="font-size: 0.8rem; padding: 0.5rem;">🤖 Improve</button>` : ''}
             </div>
         `;
         vocabList.appendChild(card);
@@ -3119,6 +3446,7 @@ function renderWordBank() {
             <div class="action-buttons">
                 <button class="btn btn-quiz" onclick="startQuiz(${vocab.id})">Latihan Soal</button>
                 <button class="btn btn-example" onclick="showExamples(${vocab.id})">Lihat Contoh</button>
+                ${AI_CONFIG.useAI ? `<button class="btn btn-example" onclick="improveVocabWithAI(${vocab.id})" title="Improve with AI" style="font-size: 0.8rem; padding: 0.5rem;">🤖 Improve</button>` : ''}
             </div>
         `;
         wordBankList.appendChild(card);
