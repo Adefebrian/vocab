@@ -776,3 +776,45 @@ header p {
     background: rgba(255, 255, 255, 0.3);
 }
 
+/* Word Bank Checkbox Styling */
+.word-bank-checkbox {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    padding: 0.5rem;
+    border-radius: 8px;
+    transition: all 0.3s ease;
+}
+
+.word-bank-checkbox:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.word-bank-checkbox input[type="checkbox"] {
+    width: 20px;
+    height: 20px;
+    cursor: pointer;
+    accent-color: var(--primary-color);
+}
+
+/* Footer Styling */
+footer {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-muted);
+    margin-top: 2rem;
+    position: relative;
+    z-index: 1;
+}
+
+footer a {
+    color: var(--primary-color);
+    text-decoration: none;
+    transition: all 0.3s ease;
+}
+
+footer a:hover {
+    color: var(--accent-color);
+    text-decoration: underline;
+}
