@@ -1,20 +1,34 @@
-// AI API Configuration
+// AI API Configuration - Auto-configured with Gemini API
 let AI_CONFIG = {
     huggingFaceAPI: 'https://api-inference.huggingface.co/models',
-    geminiAPI: null, // User can set their own API key
+    geminiAPI: 'AIzaSyDaqXnLOwKuepi9JsiLMvA2u_PO2n-avUQ', // Auto-configured
     useAI: true,
-    preferredProvider: 'huggingface' // 'huggingface' or 'gemini'
+    preferredProvider: 'gemini' // Use Gemini by default
 };
 
-// Load AI config from localStorage
+// Load AI config from localStorage (but use defaults if not set)
 function loadAIConfig() {
     const saved = localStorage.getItem('aiConfig');
     if (saved) {
         try {
-            AI_CONFIG = { ...AI_CONFIG, ...JSON.parse(saved) };
+            const savedConfig = JSON.parse(saved);
+            // Merge but keep API key if not in saved config
+            AI_CONFIG = { 
+                ...AI_CONFIG, 
+                ...savedConfig,
+                // Always use the provided API key if saved one is empty
+                geminiAPI: savedConfig.geminiAPI || AI_CONFIG.geminiAPI
+            };
         } catch (e) {
             console.error('Error loading AI config:', e);
         }
+    }
+    // Ensure AI is enabled by default
+    if (AI_CONFIG.useAI === undefined) {
+        AI_CONFIG.useAI = true;
+    }
+    if (!AI_CONFIG.preferredProvider) {
+        AI_CONFIG.preferredProvider = 'gemini';
     }
 }
 
@@ -25,6 +39,13 @@ function saveAIConfig() {
 
 // Initialize AI config on load
 loadAIConfig();
+
+// Log AI status
+console.log('AI Config initialized:', {
+    useAI: AI_CONFIG.useAI,
+    provider: AI_CONFIG.preferredProvider,
+    hasAPIKey: !!AI_CONFIG.geminiAPI
+});
 
 // AI Helper Functions
 async function callHuggingFaceAPI(model, inputs) {
@@ -69,7 +90,9 @@ async function callGeminiAPI(prompt) {
         
         if (!response.ok) {
             const errorData = await response.json().catch(() => ({}));
-            throw new Error(`API Error: ${response.status} - ${errorData.error?.message || 'Unknown error'}`);
+            const errorMsg = errorData.error?.message || `HTTP ${response.status}`;
+            console.error('Gemini API Error Response:', errorData);
+            throw new Error(`API Error: ${response.status} - ${errorMsg}`);
         }
         
         const data = await response.json();
@@ -88,24 +111,50 @@ async function categorizeWithAI(verb, meaning) {
     const categories = ['sehari-hari', 'perasaan', 'keluarga', 'teman', 'bisnis', 'marketing', 'keuangan', 'hr', 'sales', 'akademik', 'sains', 'matematika', 'sejarah', 'literatur', 'teknologi', 'programming', 'ai', 'cybersecurity', 'makanan', 'fashion', 'kecantikan', 'hobi', 'musik', 'film', 'kesehatan', 'olahraga', 'fitness', 'medis', 'perjalanan', 'hotel', 'transportasi', 'slang', 'formal', 'hukum', 'politik', 'lingkungan'];
     
     if (!AI_CONFIG.useAI) {
+        console.log(`AI disabled, using heuristic for: ${verb}`);
         return determineCategoryHeuristic(verb);
     }
     
     try {
-        const prompt = `Categorize the English verb "${verb}" (meaning: "${meaning}") into ONE of these categories: ${categories.join(', ')}. Return ONLY the category name, nothing else.`;
+        const prompt = `You are an expert English teacher. Categorize the English verb "${verb}" (Indonesian meaning: "${meaning}") into EXACTLY ONE of these categories: ${categories.join(', ')}. 
+
+Consider the verb's meaning and common usage context. Return ONLY the category name in lowercase, nothing else. No explanation, no punctuation, just the category name.
+
+Example: If verb is "eat", return: makanan
+Example: If verb is "code", return: teknologi`;
         
         if (AI_CONFIG.preferredProvider === 'gemini' && AI_CONFIG.geminiAPI) {
+            console.log(`Using AI to categorize: ${verb}`);
             const result = await callGeminiAPI(prompt);
-            const category = result.trim().toLowerCase();
+            let category = result.trim().toLowerCase();
+            
+            // Clean up common AI response patterns
+            category = category.replace(/^(category|answer|result|the category is|category:)\s*/i, '');
+            category = category.replace(/[^a-z-]/g, '');
+            category = category.split('\n')[0].trim();
+            category = category.split('.')[0].trim();
+            category = category.split(',')[0].trim();
+            category = category.split(' ')[0].trim();
+            
             if (categories.includes(category)) {
+                console.log(`AI categorized "${verb}" as: ${category}`);
                 return category;
             }
+            
+            // Try to find partial match
+            const partialMatch = categories.find(cat => category.includes(cat) || cat.includes(category));
+            if (partialMatch) {
+                console.log(`AI categorized "${verb}" as: ${partialMatch} (partial match)`);
+                return partialMatch;
+            }
+            
+            console.warn(`AI returned invalid category "${category}" for "${verb}", using heuristic`);
         }
         
-        // Fallback to Hugging Face or heuristic
+        // Fallback to heuristic
         return determineCategoryHeuristic(verb);
     } catch (error) {
-        console.warn('AI categorization failed, using heuristic:', error);
+        console.warn(`AI categorization failed for "${verb}", using heuristic:`, error);
         return determineCategoryHeuristic(verb);
     }
 }
@@ -141,11 +190,21 @@ async function getMeaningWithAI(verb) {
     }
     
     try {
-        const prompt = `Translate the English verb "${verb}" to Indonesian. Provide ONLY the Indonesian translation, nothing else. Make it concise and accurate.`;
+        const prompt = `Translate the English verb "${verb}" to Indonesian. Provide ONLY the Indonesian translation in one word or short phrase. Be concise and accurate. Return only the translation, no explanation.`;
         
         if (AI_CONFIG.preferredProvider === 'gemini' && AI_CONFIG.geminiAPI) {
             const result = await callGeminiAPI(prompt);
-            return result.trim();
+            let meaning = result.trim();
+            
+            // Clean up AI response
+            meaning = meaning.replace(/^(translation|meaning|arti|terjemahan):\s*/i, '');
+            meaning = meaning.split('\n')[0].trim();
+            meaning = meaning.split('.')[0].trim();
+            meaning = meaning.split(',')[0].trim();
+            
+            if (meaning && meaning.length > 0) {
+                return meaning;
+            }
         }
         
         // Fallback to translation API
@@ -163,34 +222,65 @@ async function generateExamplesWithAI(verb, verbForms, meaning) {
     }
     
     try {
-        const prompt = `Generate 3 natural, varied example sentences in English using the verb "${verb}" (V1: ${verbForms.v1}, V2: ${verbForms.v2}, V3: ${verbForms.v3}). Use different tenses (present, past, perfect) and make them sound like everyday conversation. Format: One sentence per line, no numbering.`;
+        const prompt = `Generate 3 natural, varied example sentences in English using the verb "${verb}" (V1: ${verbForms.v1}, V2: ${verbForms.v2}, V3: ${verbForms.v3}). 
+
+Requirements:
+- Use different tenses (present simple, past simple, present perfect)
+- Make them sound like everyday conversation
+- Each sentence should be different and natural
+- Format: One sentence per line, no numbering, no bullet points
+
+Example format:
+I ${verbForms.v1} every morning.
+She ${verbForms.v2} yesterday.
+They have ${verbForms.v3} before.`;
         
         if (AI_CONFIG.preferredProvider === 'gemini' && AI_CONFIG.geminiAPI) {
             const result = await callGeminiAPI(prompt);
-            const sentences = result.split('\n').filter(s => s.trim()).slice(0, 3);
+            let sentences = result.split('\n')
+                .map(s => s.trim())
+                .filter(s => s.length > 0 && !s.match(/^(example|sentence|format|requirements?):/i))
+                .map(s => s.replace(/^[-•*]\s*/, '').replace(/^\d+[\.\)]\s*/, '').trim())
+                .filter(s => s.length > 10 && s.includes(verbForms.v1) || s.includes(verbForms.v2) || s.includes(verbForms.v3))
+                .slice(0, 3);
+            
+            // If we don't have enough sentences, try to extract from paragraphs
+            if (sentences.length < 3) {
+                const paragraphSentences = result.split(/[.!?]+/)
+                    .map(s => s.trim())
+                    .filter(s => s.length > 10 && (s.includes(verbForms.v1) || s.includes(verbForms.v2) || s.includes(verbForms.v3)))
+                    .slice(0, 3 - sentences.length);
+                sentences = [...sentences, ...paragraphSentences];
+            }
             
             const examples = [];
-            for (const sentence of sentences) {
-                const cleanSentence = sentence.replace(/^\d+\.\s*/, '').trim();
-                if (cleanSentence) {
-                    const translation = await translateToIndonesian(cleanSentence);
-                    examples.push({
-                        sentence: cleanSentence,
-                        translation: translation
-                    });
+            for (const sentence of sentences.slice(0, 3)) {
+                if (sentence && sentence.length > 0) {
+                    try {
+                        const translation = await translateToIndonesian(sentence);
+                        examples.push({
+                            sentence: sentence,
+                            translation: translation
+                        });
+                    } catch (e) {
+                        // If translation fails, use template
+                        const templates = generateVariedExamples(verb, verbForms, meaning);
+                        return templates.map(t => ({ sentence: t.en, translation: t.id }));
+                    }
                 }
             }
             
-            if (examples.length > 0) {
+            if (examples.length >= 2) {
                 return examples;
             }
         }
         
         // Fallback to template-based generation
-        return generateVariedExamples(verb, verbForms, meaning);
+        return generateVariedExamples(verb, verbForms, meaning).map(t => ({ sentence: t.en, translation: t.id }));
     } catch (error) {
         console.warn('AI example generation failed, using templates:', error);
-        return generateVariedExamples(verb, verbForms, meaning);
+        const templates = generateVariedExamples(verb, verbForms, meaning);
+        return templates.map(t => ({ sentence: t.en, translation: t.id }));
     }
 }
 
@@ -2107,70 +2197,61 @@ async function translateToIndonesian(text) {
     }
 }
 
-// Function untuk fetch dari Free Dictionary API
+// Function untuk fetch dari Free Dictionary API dengan AI enhancement
 async function fetchWordFromAPI(word) {
+    // Get verb forms first
+    const verbForms = getVerbForms(word);
+    
+    try {
+        // Try to get definition from dictionary API (optional, for reference)
+        let definition = '';
     try {
         const response = await fetch(`https://api.dictionaryapi.dev/api/v2/entries/en/${encodeURIComponent(word)}`);
-        if (!response.ok) {
-            throw new Error('Word not found');
-        }
+            if (response.ok) {
         const data = await response.json();
-        
         if (data && data.length > 0) {
             const wordData = data[0];
             const meanings = wordData.meanings || [];
-            
-            // Ambil definisi pertama
-            let definition = '';
-            let examples = [];
-            
-            if (meanings.length > 0) {
-                const firstMeaning = meanings[0];
-                if (firstMeaning.definitions && firstMeaning.definitions.length > 0) {
-                    definition = firstMeaning.definitions[0].definition;
-                    // Ambil contoh kalimat
-                    firstMeaning.definitions.forEach(def => {
-                        if (def.example) {
-                            examples.push(def.example);
-                        }
-                    });
+                    if (meanings.length > 0 && meanings[0].definitions && meanings[0].definitions.length > 0) {
+                        definition = meanings[0].definitions[0].definition;
+                    }
                 }
             }
-            
-            // Get verb forms first
-            const verbForms = getVerbForms(word);
-            
-            // Use AI for better meaning/translation
-            let translatedDefinition;
-            if (definition) {
-                translatedDefinition = await getMeaningWithAI(word);
-            } else {
-                translatedDefinition = await getMeaningWithAI(word);
+        } catch (e) {
+            // Dictionary API is optional, continue without it
+            console.log('Dictionary API not available, using AI only');
+        }
+        
+        // Always use AI for better meaning/translation
+        let translatedDefinition;
+        try {
+            translatedDefinition = await getMeaningWithAI(word);
+        } catch (e) {
+            console.warn('AI translation failed, using fallback:', e);
+            translatedDefinition = await translateToIndonesian(word);
+        }
+        
+        // Always use AI for better example sentences
+        let translatedExamples = [];
+        try {
+            translatedExamples = await generateExamplesWithAI(word, verbForms, translatedDefinition);
+        } catch (e) {
+            console.warn('AI example generation failed, using templates:', e);
+            const templates = generateVariedExamples(word, verbForms, translatedDefinition);
+            translatedExamples = templates.map(t => ({ sentence: t.en, translation: t.id }));
+        }
+        
+        // Generate varied quiz
+        const quiz = generateVariedQuiz(word, verbForms);
+        
+        // Always use AI for intelligent categorization
+        let category;
+        try {
+            category = await categorizeWithAI(word, translatedDefinition);
+        } catch (e) {
+            console.warn('AI categorization failed, using heuristic:', e);
+            category = determineCategoryHeuristic(word);
             }
-            
-            // Use AI for example sentences
-            let translatedExamples = [];
-            if (examples.length > 0) {
-                // Use examples from API but translate with AI
-                for (let i = 0; i < Math.min(examples.length, 3); i++) {
-                    const translated = await translateToIndonesian(examples[i]);
-                    translatedExamples.push({
-                        sentence: examples[i],
-                        translation: translated
-                    });
-                }
-            }
-            
-            // If no examples from API, use AI to generate
-            if (translatedExamples.length === 0) {
-                translatedExamples = await generateExamplesWithAI(word, verbForms, translatedDefinition);
-            }
-            
-            // Generate varied quiz
-            const quiz = generateVariedQuiz(word, verbForms);
-            
-            // Use AI for intelligent categorization
-            const category = await categorizeWithAI(word, translatedDefinition);
             
             const level = determineLevel(word);
             
@@ -2186,11 +2267,22 @@ async function fetchWordFromAPI(word) {
                 examples: translatedExamples,
                 quiz: quiz
             };
-        }
-        throw new Error('No data found');
     } catch (error) {
-        console.error('API Error:', error);
-        throw error;
+        console.error('Error in fetchWordFromAPI:', error);
+        // Even if everything fails, return basic structure
+        const verbForms = getVerbForms(word);
+        return {
+            id: vocabularyData.length + 1,
+            v1: verbForms.v1,
+            v2: verbForms.v2,
+            v3: verbForms.v3,
+            meaning: word,
+            type: verbForms.type,
+            category: determineCategoryHeuristic(word),
+            level: determineLevel(word),
+            examples: generateVariedExamples(word, verbForms, word).map(t => ({ sentence: t.en, translation: t.id })),
+            quiz: generateVariedQuiz(word, verbForms)
+        };
     }
 }
 
@@ -2266,7 +2358,7 @@ async function generateBulkVocabulary() {
                 try {
                     meaning = await translateToIndonesian(verb);
                 } catch (e2) {
-                    meaning = verb; // Use verb as fallback
+                meaning = verb; // Use verb as fallback
                 }
             }
             
@@ -2279,23 +2371,13 @@ async function generateBulkVocabulary() {
             let examples = [];
             try {
                 examples = await generateExamplesWithAI(verb, verbForms, meaning);
+                // Rate limiting for API
+                await new Promise(resolve => setTimeout(resolve, 1000));
             } catch (e) {
+                console.warn(`AI example generation failed for ${verb}, using templates:`, e);
                 // Fallback to template-based
                 const exampleTemplates = generateVariedExamples(verb, verbForms, meaning);
-                for (const template of exampleTemplates) {
-                    try {
-                        const translated = await translateToIndonesian(template.en);
-                        examples.push({
-                            sentence: template.en,
-                            translation: translated || template.id
-                        });
-                    } catch (e2) {
-                        examples.push({
-                            sentence: template.en,
-                            translation: template.id
-                        });
-                    }
-                }
+                examples = exampleTemplates.map(t => ({ sentence: t.en, translation: t.id }));
             }
             
             // Generate varied quiz
@@ -2305,7 +2387,10 @@ async function generateBulkVocabulary() {
             let finalCategory = category;
             try {
                 finalCategory = await categorizeWithAI(verb, meaning);
+                // Rate limiting for API
+                await new Promise(resolve => setTimeout(resolve, 1000));
             } catch (e) {
+                console.warn(`AI categorization failed for ${verb}, using heuristic:`, e);
                 finalCategory = category; // Use original category
             }
             
@@ -2417,11 +2502,13 @@ async function generateCategoryVocabulary(category) {
         let meaning = verb;
         try {
             meaning = await getMeaningWithAI(verb);
+            // Rate limiting for API
+            await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (e) {
             try {
                 meaning = await translateToIndonesian(verb);
             } catch (e2) {
-                meaning = verb;
+            meaning = verb;
             }
         }
         
@@ -2431,23 +2518,13 @@ async function generateCategoryVocabulary(category) {
         let examples = [];
         try {
             examples = await generateExamplesWithAI(verb, verbForms, meaning);
+            // Rate limiting for API
+            await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (e) {
+            console.warn(`AI example generation failed for ${verb}, using templates:`, e);
             // Fallback to template-based
             const exampleTemplates = generateVariedExamples(verb, verbForms, meaning);
-            for (const template of exampleTemplates) {
-                try {
-                    const translated = await translateToIndonesian(template.en);
-                    examples.push({
-                        sentence: template.en,
-                        translation: translated || template.id
-                    });
-                } catch (e2) {
-                    examples.push({
-                        sentence: template.en,
-                        translation: template.id
-                    });
-                }
-            }
+            examples = exampleTemplates.map(t => ({ sentence: t.en, translation: t.id }));
         }
         
         // Generate varied quiz
@@ -2457,7 +2534,10 @@ async function generateCategoryVocabulary(category) {
         let finalCategory = category;
         try {
             finalCategory = await categorizeWithAI(verb, meaning);
+            // Rate limiting for API
+            await new Promise(resolve => setTimeout(resolve, 1000));
         } catch (e) {
+            console.warn(`AI categorization failed for ${verb}, using heuristic:`, e);
             finalCategory = category; // Use original category
         }
         
@@ -2615,11 +2695,11 @@ async function improveVocabWithAI(vocabId) {
         // Improve meaning
         const improvedMeaning = await getMeaningWithAI(vocab.v1);
         
-        // Improve examples
-        const improvedExamples = await generateExamplesWithAI(vocab.v1, verbForms, improvedMeaning);
-        
-        // Improve category
+        // Improve category (use improved meaning for better categorization)
         const improvedCategory = await categorizeWithAI(vocab.v1, improvedMeaning);
+        
+        // Improve examples (use improved meaning for better context)
+        const improvedExamples = await generateExamplesWithAI(vocab.v1, verbForms, improvedMeaning);
         
         // Update vocabulary
         vocab.meaning = improvedMeaning;
@@ -2636,6 +2716,79 @@ async function improveVocabWithAI(vocabId) {
     } catch (error) {
         console.error('Error improving vocab with AI:', error);
         showMessage('Error: ' + error.message, 'error');
+    }
+}
+
+// Batch improve all vocabulary with AI
+async function regenerateAllWithAI() {
+    if (!AI_CONFIG.useAI) {
+        showMessage('AI features tidak diaktifkan!', 'error');
+        return;
+    }
+    
+    if (!confirm('Ini akan memperbaiki semua vocabulary dengan AI. Proses ini mungkin memakan waktu. Lanjutkan?')) {
+        return;
+    }
+    
+    const loadingIndicator = document.getElementById('loadingIndicator');
+    if (loadingIndicator) {
+        loadingIndicator.style.display = 'flex';
+        loadingIndicator.querySelector('span').textContent = 'Memperbaiki vocabulary dengan AI...';
+    }
+    
+    let improved = 0;
+    let failed = 0;
+    
+    try {
+        for (let i = 0; i < vocabularyData.length; i++) {
+            const vocab = vocabularyData[i];
+            
+            try {
+                const verbForms = getVerbForms(vocab.v1);
+                
+                // Improve meaning
+                const improvedMeaning = await getMeaningWithAI(vocab.v1);
+                await new Promise(resolve => setTimeout(resolve, 1500)); // Rate limiting
+                
+                // Improve category
+                const improvedCategory = await categorizeWithAI(vocab.v1, improvedMeaning);
+                await new Promise(resolve => setTimeout(resolve, 1500)); // Rate limiting
+                
+                // Improve examples
+                const improvedExamples = await generateExamplesWithAI(vocab.v1, verbForms, improvedMeaning);
+                await new Promise(resolve => setTimeout(resolve, 1500)); // Rate limiting
+                
+                // Update vocabulary
+                vocab.meaning = improvedMeaning;
+                vocab.examples = improvedExamples;
+                vocab.category = improvedCategory;
+                
+                improved++;
+                
+                if (loadingIndicator && (i + 1) % 10 === 0) {
+                    loadingIndicator.querySelector('span').textContent = `Memperbaiki vocabulary dengan AI... ${i + 1}/${vocabularyData.length} (${improved} berhasil)`;
+                }
+            } catch (error) {
+                console.error(`Error improving vocab ${vocab.v1}:`, error);
+                failed++;
+            }
+        }
+        
+        // Save to storage
+        saveVocabularyToStorage();
+        
+        // Refresh display
+        filterAndSearch(document.getElementById('searchInput').value);
+        
+        showMessage(`${improved} vocabulary berhasil diperbaiki! ${failed > 0 ? `(${failed} gagal)` : ''}`, 'success');
+    } catch (error) {
+        console.error('Error in batch improve:', error);
+        showMessage('Error: ' + error.message, 'error');
+    } finally {
+        if (loadingIndicator) {
+            loadingIndicator.style.display = 'none';
+            loadingIndicator.querySelector('span').textContent = 'Memuat data dari API...';
+        }
     }
 }
 
@@ -2672,6 +2825,23 @@ function toggleAIConfig() {
 function toggleAIUsage() {
     AI_CONFIG.useAI = document.getElementById('useAICheckbox').checked;
     saveAIConfig();
+    updateAIStatus();
+}
+
+function updateAIStatus() {
+    const aiStatus = document.getElementById('aiStatus');
+    if (aiStatus) {
+        if (AI_CONFIG.useAI && AI_CONFIG.geminiAPI) {
+            aiStatus.innerHTML = `<span style="color: #22c55e;">●</span> AI Enabled (Gemini)`;
+            aiStatus.style.color = 'var(--text-muted)';
+        } else if (AI_CONFIG.useAI) {
+            aiStatus.innerHTML = `<span style="color: #f59e0b;">●</span> AI Enabled (Hugging Face)`;
+            aiStatus.style.color = 'var(--text-muted)';
+        } else {
+            aiStatus.innerHTML = `<span style="color: #ef4444;">●</span> AI Disabled`;
+            aiStatus.style.color = 'var(--text-muted)';
+        }
+    }
 }
 
 function changeAIProvider() {
@@ -2695,8 +2865,21 @@ function changeAIProvider() {
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
-    // Load AI config first
+    // Load AI config first and ensure it's enabled
     loadAIConfig();
+    
+    // Force enable AI if not already enabled
+    if (!AI_CONFIG.useAI) {
+        AI_CONFIG.useAI = true;
+        saveAIConfig();
+    }
+    
+    // Ensure Gemini API key is set
+    if (!AI_CONFIG.geminiAPI) {
+        AI_CONFIG.geminiAPI = 'AIzaSyDaqXnLOwKuepi9JsiLMvA2u_PO2n-avUQ';
+        AI_CONFIG.preferredProvider = 'gemini';
+        saveAIConfig();
+    }
     
     // Setup keyboard shortcuts
     setupKeyboardShortcuts();
@@ -2721,11 +2904,24 @@ document.addEventListener('DOMContentLoaded', function() {
     // Setup Gemini API key input
     const geminiKeyInput = document.getElementById('geminiAPIKey');
     if (geminiKeyInput) {
+        // Set default API key if empty
+        if (!geminiKeyInput.value && AI_CONFIG.geminiAPI) {
+            geminiKeyInput.value = AI_CONFIG.geminiAPI;
+        }
         geminiKeyInput.addEventListener('blur', function() {
-            AI_CONFIG.geminiAPI = this.value.trim() || null;
+            AI_CONFIG.geminiAPI = this.value.trim() || 'AIzaSyDaqXnLOwKuepi9JsiLMvA2u_PO2n-avUQ';
             saveAIConfig();
         });
     }
+    
+    // Update AI config UI to show it's enabled
+    const useAICheckbox = document.getElementById('useAICheckbox');
+    if (useAICheckbox) {
+        useAICheckbox.checked = AI_CONFIG.useAI;
+    }
+    
+    // Update AI status indicator
+    updateAIStatus();
     
     // Load from localStorage first
     loadVocabularyFromStorage();
