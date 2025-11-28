@@ -18,6 +18,9 @@
                 <div>
                     <h1>📚 Vocab Learning</h1>
                     <p>Belajar Kosakata Bahasa Inggris dengan Mudah</p>
+                    <div id="aiStatus" style="display: flex; align-items: center; gap: 0.5rem; margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                        <span style="color: #22c55e;">●</span> AI Enabled (Gemini)
+                    </div>
                 </div>
                 <div style="display: flex; gap: 0.5rem; flex-wrap: wrap;">
                     <button id="wordBankBtn" class="btn-api" onclick="toggleWordBankView()" style="font-size: 0.9rem; padding: 0.8rem 1.5rem;">📚 Word Bank</button>
@@ -34,6 +37,7 @@
                         <input type="file" accept=".json,.csv" onchange="handleImport(event)" style="display: none;">
                     </label>
                     <button id="aiConfigBtn" class="btn-api" onclick="toggleAIConfig()" style="font-size: 0.9rem; padding: 0.8rem 1.5rem;">🤖 AI Config</button>
+                    <button id="regenerateAllBtn" class="btn-api" onclick="regenerateAllWithAI()" style="font-size: 0.9rem; padding: 0.8rem 1.5rem; background: linear-gradient(135deg, #ec4899, #8b5cf6);">✨ Regenerate All</button>
                 </div>
             </div>
         </header>
@@ -67,13 +71,16 @@
                 </div>
                 
                 <div style="padding: 1rem; background: rgba(99, 102, 241, 0.1); border-radius: 10px; margin-bottom: 1rem;">
-                    <strong style="color: var(--text-primary);">AI Features:</strong>
+                    <strong style="color: var(--text-primary);">AI Features (Auto-enabled):</strong>
                     <ul style="margin-top: 0.5rem; padding-left: 1.5rem; color: var(--text-secondary); font-size: 0.9rem;">
-                        <li>Intelligent categorization based on context</li>
-                        <li>More accurate Indonesian translations</li>
-                        <li>Natural, varied example sentences</li>
-                        <li>Better verb validation and generation</li>
+                        <li>✅ Intelligent categorization based on context</li>
+                        <li>✅ More accurate Indonesian translations</li>
+                        <li>✅ Natural, varied example sentences</li>
+                        <li>✅ Better verb validation and generation</li>
                     </ul>
+                    <p style="margin-top: 0.5rem; font-size: 0.85rem; color: var(--text-muted);">
+                        <strong>Status:</strong> AI is enabled and using Gemini API
+                    </p>
                 </div>
             </div>
             <button class="btn-close" onclick="toggleAIConfig()">Save & Close</button>
